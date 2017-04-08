@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright (C) 2017 - Fernando José García Padilla - Universidad de Sevilla
 
 #include "TFG.h"
 
