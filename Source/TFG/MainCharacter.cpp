@@ -12,6 +12,10 @@ AMainCharacter::AMainCharacter()
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
 
+	// Set turn rates for pad controller
+	BaseTurnRate = 45.f;
+	BaseLookUpRate = 45.f;
+
  	// Set this character to call Tick() every frame
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -46,6 +50,8 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	// Camera movement
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+	PlayerInputComponent->BindAxis("TurnRate", this, &AMainCharacter::TurnAtRate);
+	PlayerInputComponent->BindAxis("LookUpRate", this, &AMainCharacter::LookUpAtRate);
 }
 
 void AMainCharacter::MoveForward(float Value)
@@ -64,4 +70,16 @@ void AMainCharacter::MoveRight(float Value)
 		// Add movement in that direction
 		AddMovementInput(GetActorRightVector(), Value);
 	}
+}
+
+void AMainCharacter::TurnAtRate(float Rate)
+{
+	// Calculate delta for this frame from the rate information
+	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AMainCharacter::LookUpAtRate(float Rate)
+{
+	// Calculate delta for this frame from the rate information
+	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
