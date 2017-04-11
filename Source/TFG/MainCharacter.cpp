@@ -33,15 +33,15 @@ AMainCharacter::AMainCharacter()
 
 	// First person camera arm
 	FirstPersonCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("FirstPersonCameraArm"));
-	FirstPersonCameraArm->SetupAttachment(GetMesh(), TEXT("HeadSocket"));
-	FirstPersonCameraArm->RelativeRotation = FRotator(0.0f, 90.0f, 0.0f);
-	FirstPersonCameraArm->TargetArmLength = -20.0f;
+	GetFirstPersonCameraArm()->SetupAttachment(GetMesh(), TEXT("HeadSocket"));
+	GetFirstPersonCameraArm()->RelativeRotation = FRotator(0.0f, 90.0f, 0.0f);
+	GetFirstPersonCameraArm()->TargetArmLength = -20.0f;
 
 	// First person camera
 	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCameraComponent->SetupAttachment(FirstPersonCameraArm);
-	FirstPersonCameraComponent->bUsePawnControlRotation = true;
-	FirstPersonCameraComponent->FieldOfView = 95.0f;
+	GetFirstPersonCameraComponent()->SetupAttachment(FirstPersonCameraArm);
+	GetFirstPersonCameraComponent()->bUsePawnControlRotation = true;
+	GetFirstPersonCameraComponent()->FieldOfView = 95.0f;
 
 	// Set turn rates for pad controller
 	BaseTurnRate = 45.0f;
@@ -53,8 +53,9 @@ AMainCharacter::AMainCharacter()
 	// Character movement setups
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
 	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->GravityScale = 1.5f;
-	GetCharacterMovement()->MaxWalkSpeed = 250.0f;
+	GetCharacterMovement()->AirControl = 0.7f;
 }
 
 // Called every frame

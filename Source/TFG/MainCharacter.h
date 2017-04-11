@@ -13,10 +13,9 @@ class TFG_API AMainCharacter : public ACharacter
 	// First person camera
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FirstPersonCameraComponent;
-
-public:
+	
 	// First person camera spring arm
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* FirstPersonCameraArm;
 
 public:
@@ -67,4 +66,9 @@ private:
 	// Crouch
 	void OnCrouchPressed();
 	void OnCrouchReleased();
+
+// R
+public:
+	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+	FORCEINLINE class USpringArmComponent* GetFirstPersonCameraArm() const { return FirstPersonCameraArm; }
 };
