@@ -61,7 +61,29 @@ AMainCharacter::AMainCharacter()
 // Called every frame
 void AMainCharacter::Tick(float DeltaTime)
 {
+	// Call the base class
 	Super::Tick(DeltaTime);
+
+	// Adrenaline management: Recover adrenaline per tick
+	if (CurrentAdrenaline < MaximumAdrenaline)
+	{
+		CurrentAdrenaline++;
+	}
+
+	// Adrenaline management: Time dilation
+	if (bTimeDilationIsActive)
+	{
+		// If the current adrenaline isn't enought to keep the bullet time on, we stop it
+		// Else, we calculate the new current adrenaline
+		if (CurrentAdrenaline < AdrenalinePerTimeDilation)
+		{
+			EndTimeDilation();
+		}
+		else
+		{
+			CurrentAdrenaline = FMath::Max(CurrentAdrenaline - AdrenalinePerTimeDilation, 0.0f);
+		}
+	}
 }
 
 // Called when the game starts or when spawned
@@ -105,6 +127,9 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	// Crouch
 	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &AMainCharacter::OnCrouchPressed);
 	PlayerInputComponent->BindAction("Crouch", IE_Released, this, &AMainCharacter::OnCrouchReleased);
+
+	// Special Power: Time Dilation
+	PlayerInputComponent->BindAction("TimeDilation", IE_Pressed, this, &AMainCharacter::OnTimeDilationToggle);
 }
 
 void AMainCharacter::MoveForward(float Value)
@@ -161,4 +186,34 @@ void AMainCharacter::OnCrouchPressed()
 void AMainCharacter::OnCrouchReleased()
 {
 	UnCrouch();
+}
+
+void AMainCharacter::OnTimeDilationToggle()
+{
+	// Checks if the player can use powers
+	if (bIsPowered)
+	{
+		// Toggle the time dilation (bullet time)
+		if (bTimeDilationIsActive)
+		{
+			EndTimeDilation();
+		}
+		else {
+			StartTimeDilation();
+		}
+	}
+}
+
+void AMainCharacter::StartTimeDilation()
+{
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), TimeDilationPlayerRate);
+	this->CustomTimeDilation = TimeDilationPlayerRate;
+	bTimeDilationIsActive = true;
+}
+
+void AMainCharacter::EndTimeDilation()
+{
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+	this->CustomTimeDilation = 1.0f;
+	bTimeDilationIsActive = false;
 }

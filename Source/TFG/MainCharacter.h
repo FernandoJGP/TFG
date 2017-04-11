@@ -42,6 +42,38 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	float BaseLookUpRate;
 
+	// Stores if the player has powers currently
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Power")
+		bool bIsPowered = true; // For debugging
+
+	// Maximum adrenaline that the player can store
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Adrenaline Management")
+		float MaximumAdrenaline = 1000.0f;
+
+	// Current adrenaline that the player have
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Adrenaline Management")
+		float CurrentAdrenaline = MaximumAdrenaline;
+
+	// Adrenaline recovered per tick
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Adrenaline Management")
+	float AdrenalinePerTick = 5.0f;
+
+	// Checks if time dilation it's active
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
+		bool bTimeDilationIsActive;
+
+	// Bullet time world rate
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
+		float TimeDilationWorldRate = 0.25f;
+
+	// Bullet time player rate
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
+		float TimeDilationPlayerRate = 0.5f;
+
+	// Adrenaline that the player loss per tick when use bullet time
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
+		float AdrenalinePerTimeDilation = 2.5f;
+
 // Functions
 private:
 	// Handles moving forward/backward
@@ -67,7 +99,12 @@ private:
 	void OnCrouchPressed();
 	void OnCrouchReleased();
 
-// R
+	// Time dilation
+	void OnTimeDilationToggle();
+	void StartTimeDilation();
+	void EndTimeDilation();
+
+// Components gets
 public:
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 	FORCEINLINE class USpringArmComponent* GetFirstPersonCameraArm() const { return FirstPersonCameraArm; }
