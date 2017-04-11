@@ -6,6 +6,7 @@
 
 #define CapsuleRadius 42.0f
 #define CapsuleHalfHeight 96.0f
+
 #define SprintSpeed 800.0f
 #define WalkSpeed 250.0f
 
@@ -50,6 +51,8 @@ AMainCharacter::AMainCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Character movement setups
+	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
 	GetCharacterMovement()->GravityScale = 1.5f;
 	GetCharacterMovement()->MaxWalkSpeed = 250.0f;
 }
@@ -97,6 +100,10 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	// Jump
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+
+	// Crouch
+	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &AMainCharacter::OnCrouchPressed);
+	PlayerInputComponent->BindAction("Crouch", IE_Released, this, &AMainCharacter::OnCrouchReleased);
 }
 
 void AMainCharacter::MoveForward(float Value)
@@ -143,4 +150,14 @@ void AMainCharacter::OnSprintPressed()
 void AMainCharacter::OnSprintReleased()
 {
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AMainCharacter::OnCrouchPressed()
+{
+	Crouch();
+}
+
+void AMainCharacter::OnCrouchReleased()
+{
+	UnCrouch();
 }

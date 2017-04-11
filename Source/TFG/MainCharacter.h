@@ -63,4 +63,8 @@ private:
 	// Sprint
 	void OnSprintPressed();
 	void OnSprintReleased();
+
+	// Crouch
+	void OnCrouchPressed();
+	void OnCrouchReleased();
 };
