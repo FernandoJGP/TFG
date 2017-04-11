@@ -2,6 +2,7 @@
 
 #include "TFG.h"
 #include "MainCharacter.h"
+#include "Animation/AnimInstance.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMainCharacter
@@ -10,11 +11,37 @@
 AMainCharacter::AMainCharacter()
 {
 	// Set size for collision capsule
-	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
+	#define CapsuleRadius 42.0f
+	#define CapsuleHalfHeight 96.0f
+	GetCapsuleComponent()->InitCapsuleSize(CapsuleRadius, CapsuleHalfHeight); // Default: 55.0f and 96.0f
+	
+	// Initialize mesh
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SkeletalMeshObj(TEXT("/Game/Hero/Mannequin/Mesh/Hero_Mannequin"));
+	static ConstructorHelpers::FObjectFinder<UAnimBlueprint> AnimationObj(TEXT("/Game/Hero/Animations/HeroAnimationBlueprint"));
+	GetMesh()->SkeletalMesh = SkeletalMeshObj.Object;
+	GetMesh()->AnimClass = AnimationObj.Object->GeneratedClass;
+	GetMesh()->RelativeLocation = FVector(0.0f, 0.0f, -CapsuleHalfHeight);
+	GetMesh()->RelativeRotation = FRotator(0.0f, -90.0f, 0.0f);
+	GetMesh()->bOnlyOwnerSee = false;
+	GetMesh()->bOwnerNoSee = false;
+	GetMesh()->bCastDynamicShadow = true;
+	GetMesh()->bReceivesDecals = false;
+
+	// First person camera arm
+	FirstPersonCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("FirstPersonCameraArm"));
+	FirstPersonCameraArm->SetupAttachment(GetMesh(), TEXT("HeadSocket"));
+	FirstPersonCameraArm->RelativeRotation = FRotator(0.0f, 90.0f, 0.0f);
+	FirstPersonCameraArm->TargetArmLength = -20.0f;
+
+	// First person camera
+	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
+	FirstPersonCameraComponent->SetupAttachment(FirstPersonCameraArm);
+	FirstPersonCameraComponent->bUsePawnControlRotation = true;
+	FirstPersonCameraComponent->FieldOfView = 95.0f;
 
 	// Set turn rates for pad controller
-	BaseTurnRate = 45.f;
-	BaseLookUpRate = 45.f;
+	BaseTurnRate = 45.0f;
+	BaseLookUpRate = 45.0f;
 
  	// Set this character to call Tick() every frame
 	PrimaryActorTick.bCanEverTick = true;

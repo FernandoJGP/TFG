@@ -10,6 +10,15 @@ class TFG_API AMainCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
+	// First person camera
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UCameraComponent* FirstPersonCameraComponent;
+
+public:
+	// First person camera spring arm
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+	class USpringArmComponent* FirstPersonCameraArm;
+
 public:
 	// Sets default values for this character's properties
 	AMainCharacter();

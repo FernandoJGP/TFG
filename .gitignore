@@ -67,3 +67,9 @@ DerivedDataCache/*
 *.swp
 *.swo
 .ctrlp_cache/
+
+# Build data
+*_BuiltData.*
+
+# Hero skeleton
+Content/Hero/*

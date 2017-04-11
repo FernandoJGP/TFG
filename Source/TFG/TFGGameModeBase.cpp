@@ -3,8 +3,7 @@
 #include "TFG.h"
 #include "TFGGameModeBase.h"
 
-ATFGGameModeBase::ATFGGameModeBase()
-	: Super()
+ATFGGameModeBase::ATFGGameModeBase() : Super()
 {
 	// Default pawn
 	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/Blueprints/MainCharacter"));
