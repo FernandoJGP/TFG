@@ -64,6 +64,9 @@ void AMainCharacter::Tick(float DeltaTime)
 	// Call the base class
 	Super::Tick(DeltaTime);
 
+	// Check if can blink in the tick
+	CheckCanBlink();
+
 	// Adrenaline management: Recover adrenaline per tick
 	if (CurrentAdrenaline < MaximumAdrenaline)
 	{
@@ -130,6 +133,9 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	// Special Power: Time Dilation
 	PlayerInputComponent->BindAction("TimeDilation", IE_Pressed, this, &AMainCharacter::OnTimeDilationToggle);
+
+	// Special Power: Blink
+	PlayerInputComponent->BindAction("Blink", IE_Pressed, this, &AMainCharacter::OnBlink);
 }
 
 void AMainCharacter::MoveForward(float Value)
@@ -216,4 +222,53 @@ void AMainCharacter::EndTimeDilation()
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 	this->CustomTimeDilation = 1.0f;
 	bTimeDilationIsActive = false;
+}
+
+void AMainCharacter::OnBlink()
+{
+	if (bCanBlink && CurrentAdrenaline >= AdrenalinePerBlink) {
+		bBlinkIsActive = true;
+		ACharacter::Jump();
+		// Make delay
+		this->SetActorLocationAndRotation(BlinkLocation + FVector(0, 0, 100), GetCapsuleComponent()->GetComponentRotation());
+		CurrentAdrenaline = FMath::Max(CurrentAdrenaline - AdrenalinePerBlink, 0.0f);
+		bBlinkIsActive = false;
+	}
+}
+
+void AMainCharacter::CheckCanBlink()
+{
+	if (bIsPowered && !bBlinkIsActive)
+	{
+		// Trace a line from the camera location in the direction where the player was looking
+		FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
+		RV_TraceParams.bTraceComplex = true;
+		RV_TraceParams.bTraceAsyncScene = true;
+		RV_TraceParams.bReturnPhysicalMaterial = false;
+
+		FHitResult RV_Hit(ForceInit);
+
+		GetWorld()->LineTraceSingleByChannel(
+			RV_Hit, // Result
+			FirstPersonCameraComponent->GetComponentLocation(), // Start
+			FirstPersonCameraComponent->GetComponentLocation() +
+			(FirstPersonCameraComponent->GetForwardVector() * BlinkMaximumDistance), // End
+			ECC_Visibility, // Collision channel
+			RV_TraceParams
+		);
+
+		// If was a blocking hit, it return true and update the blink location too
+		if (RV_Hit.bBlockingHit)
+		{
+			BlinkLocation = RV_Hit.ImpactPoint;
+			bCanBlink = true;
+		}
+		else {
+			bCanBlink = false;
+		}
+	}
+	else
+	{
+		bCanBlink = false;
+	}
 }

@@ -74,6 +74,26 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
 		float AdrenalinePerTimeDilation = 2.5f;
 
+	// Stores if the player is teleporting himself
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
+		bool bCanBlink;
+
+	// Stores if the player is teleporting himself
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
+		bool bBlinkIsActive;
+
+	// Stores if the player is teleporting himself
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
+		float BlinkMaximumDistance = 2048.0f;
+
+	// Stores the blink impact point
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
+		FVector BlinkLocation;
+
+	// Adrenaline that the player loss when use blink
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
+		float AdrenalinePerBlink = 250.0f;
+
 // Functions
 private:
 	// Handles moving forward/backward
@@ -103,6 +123,10 @@ private:
 	void OnTimeDilationToggle();
 	void StartTimeDilation();
 	void EndTimeDilation();
+
+	// Blink
+	void OnBlink();
+	void CheckCanBlink();
 
 // Components gets
 public:
