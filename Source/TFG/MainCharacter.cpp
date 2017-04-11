@@ -79,6 +79,9 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("TurnRate", this, &AMainCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AMainCharacter::LookUpAtRate);
+
+	// Action Button
+	PlayerInputComponent->BindAction("Action", IE_Pressed, this, &AMainCharacter::OnAction);
 }
 
 void AMainCharacter::MoveForward(float Value)
@@ -109,4 +112,10 @@ void AMainCharacter::LookUpAtRate(float Rate)
 {
 	// Calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AMainCharacter::OnAction()
+{
+	// TODO
+	UGameplayStatics::SetGamePaused(GetWorld(), true);
 }

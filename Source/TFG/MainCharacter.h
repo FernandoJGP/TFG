@@ -56,4 +56,7 @@ private:
 
 	// Vertical camera movement for pad controllers
 	void LookUpAtRate(float Rate);
+
+	// Action button
+	void OnAction();
 };
