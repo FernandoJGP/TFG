@@ -59,4 +59,8 @@ private:
 
 	// Action button
 	void OnAction();
+
+	// Sprint
+	void OnSprintPressed();
+	void OnSprintReleased();
 };

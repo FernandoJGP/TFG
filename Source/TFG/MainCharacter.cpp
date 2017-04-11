@@ -4,6 +4,11 @@
 #include "MainCharacter.h"
 #include "Animation/AnimInstance.h"
 
+#define CapsuleRadius 42.0f
+#define CapsuleHalfHeight 96.0f
+#define SprintSpeed 800.0f
+#define WalkSpeed 250.0f
+
 //////////////////////////////////////////////////////////////////////////
 // AMainCharacter
 
@@ -11,8 +16,6 @@
 AMainCharacter::AMainCharacter()
 {
 	// Set size for collision capsule
-	#define CapsuleRadius 42.0f
-	#define CapsuleHalfHeight 96.0f
 	GetCapsuleComponent()->InitCapsuleSize(CapsuleRadius, CapsuleHalfHeight); // Default: 55.0f and 96.0f
 	
 	// Initialize mesh
@@ -45,6 +48,10 @@ AMainCharacter::AMainCharacter()
 
  	// Set this character to call Tick() every frame
 	PrimaryActorTick.bCanEverTick = true;
+
+	// Character movement setups
+	GetCharacterMovement()->GravityScale = 1.5f;
+	GetCharacterMovement()->MaxWalkSpeed = 250.0f;
 }
 
 // Called every frame
@@ -82,6 +89,10 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	// Action Button
 	PlayerInputComponent->BindAction("Action", IE_Pressed, this, &AMainCharacter::OnAction);
+
+	// Sprint
+	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &AMainCharacter::OnSprintPressed);
+	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &AMainCharacter::OnSprintReleased);
 }
 
 void AMainCharacter::MoveForward(float Value)
@@ -118,4 +129,14 @@ void AMainCharacter::OnAction()
 {
 	// TODO
 	UGameplayStatics::SetGamePaused(GetWorld(), true);
+}
+
+void AMainCharacter::OnSprintPressed()
+{
+	GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+}
+
+void AMainCharacter::OnSprintReleased()
+{
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 }
