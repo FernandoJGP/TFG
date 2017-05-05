@@ -3,20 +3,26 @@
 #pragma once
 
 #include "GameFramework/Character.h"
+#include "HUDInterface.h"
+
 #include "MainCharacter.generated.h"
 
 UCLASS()
-class TFG_API AMainCharacter : public ACharacter
+class TFG_API AMainCharacter : public ACharacter, public IHUDInterface
 {
 	GENERATED_BODY()
 
 	// First person camera
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FirstPersonCameraComponent;
 	
 	// First person camera spring arm
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* FirstPersonCameraArm;
+
+	// Climb surface detector
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ClimbDetector", meta = (AllowPrivateAccess = "true"))
+	USphereComponent* ClimbSurfaceDetector;
 
 public:
 	// Sets default values for this character's properties
@@ -74,7 +80,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
 		float AdrenalinePerTimeDilation = 2.5f;
 
-	// Stores if the player is teleporting himself
+	// Stores if the player can blink
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
 		bool bCanBlink;
 
@@ -82,7 +88,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
 		bool bBlinkIsActive;
 
-	// Stores if the player is teleporting himself
+	// Maximum blink distance
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
 		float BlinkMaximumDistance = 2048.0f;
 
@@ -93,6 +99,38 @@ public:
 	// Adrenaline that the player loss when use blink
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
 		float AdrenalinePerBlink = 250.0f;
+
+	// User widget
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HUD")
+		TSubclassOf<class UUserWidget> HUDWidget;
+
+	// Stores if the player can trace
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+		bool bCanTrace = false;
+
+	// Stores if the player is hanging
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+		bool bIsHanging = false;
+
+	// Stores if the player is climbing
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+		bool bIsClimbingLedge = false;
+
+	// Stores the ledge height point
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+		FVector LedgeHeight;
+
+	// Stores the wall impact point
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+		FVector WallImpact;
+
+	// Stores the wall impact normal
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+		FVector WallNormal;
+
+	// Stores the wall impact normal
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+		bool bGrabLedgeDoOnce = true;
 
 // Functions
 private:
@@ -127,9 +165,35 @@ private:
 	// Blink
 	void OnBlink();
 	void CheckCanBlink();
+	void OnBlinkTimerEnd();
+
+	// Climb surface detector
+	UFUNCTION()
+	void OnClimbSurfaceDetectorBeginOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
+	UFUNCTION()
+	void OnClimbSurfaceDetectorEndOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	void DoTrace();
+	void GrabLedge();
+	void ResetGrabLedge();
+	void KneeClimb();
+	FRotator AlignToWall();
+
+// Interface methods
+public:
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
+	void HUDInterface(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface);
+	virtual void HUDInterface_Implementation(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface);
+
+//Util methods
+private:
+	// Animation util
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	class UHeroAnimationInstance* Animation;
 
 // Components gets
 public:
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 	FORCEINLINE class USpringArmComponent* GetFirstPersonCameraArm() const { return FirstPersonCameraArm; }
+	FORCEINLINE class USphereComponent* GetClimbSurfaceDetector() const { return ClimbSurfaceDetector; }
 };

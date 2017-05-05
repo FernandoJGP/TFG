@@ -2,7 +2,17 @@
 
 #include "TFG.h"
 #include "MainCharacter.h"
+
 #include "Animation/AnimInstance.h"
+#include "Blueprint/UserWidget.h"
+
+#include "Runtime/UMG/Public/UMG.h"
+#include "Runtime/UMG/Public/Blueprint/WidgetBlueprintLibrary.h"
+
+#include "Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h"
+#include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
+
+#include "HeroAnimationInstance.h"
 
 #define CapsuleRadius 42.0f
 #define CapsuleHalfHeight 96.0f
@@ -20,10 +30,10 @@ AMainCharacter::AMainCharacter()
 	GetCapsuleComponent()->InitCapsuleSize(CapsuleRadius, CapsuleHalfHeight); // Default: 55.0f and 96.0f
 	
 	// Initialize mesh
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SkeletalMeshObj(TEXT("/Game/Hero/Mannequin/Mesh/Hero_Mannequin"));
-	static ConstructorHelpers::FObjectFinder<UAnimBlueprint> AnimationObj(TEXT("/Game/Hero/Animations/HeroAnimationBlueprint"));
-	GetMesh()->SkeletalMesh = SkeletalMeshObj.Object;
-	GetMesh()->AnimClass = AnimationObj.Object->GeneratedClass;
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SkeletalMeshObjectFinder(TEXT("/Game/Hero/Mannequin/Mesh/Hero_Mannequin"));
+	static ConstructorHelpers::FObjectFinder<UAnimBlueprint> AnimationBlueprintObjectFinder(TEXT("/Game/Hero/Animations/HeroAnimationBlueprint"));
+	GetMesh()->SkeletalMesh = SkeletalMeshObjectFinder.Object;
+	GetMesh()->AnimClass = AnimationBlueprintObjectFinder.Object->GeneratedClass;
 	GetMesh()->RelativeLocation = FVector(0.0f, 0.0f, -CapsuleHalfHeight);
 	GetMesh()->RelativeRotation = FRotator(0.0f, -90.0f, 0.0f);
 	GetMesh()->bOnlyOwnerSee = false;
@@ -43,6 +53,25 @@ AMainCharacter::AMainCharacter()
 	GetFirstPersonCameraComponent()->bUsePawnControlRotation = true;
 	GetFirstPersonCameraComponent()->FieldOfView = 95.0f;
 
+	// Climb detector
+	ClimbSurfaceDetector = CreateDefaultSubobject<USphereComponent>(TEXT("ClimbSurfaceDetector"));
+	GetClimbSurfaceDetector()->SetupAttachment(RootComponent);
+	GetClimbSurfaceDetector()->InitSphereRadius(100.0f);
+	GetClimbSurfaceDetector()->bGenerateOverlapEvents = true;
+	GetClimbSurfaceDetector()->SetCollisionObjectType(ECollisionChannel::ECC_GameTraceChannel1);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Block);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Block);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Block);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldDynamic, ECollisionResponse::ECR_Block);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_PhysicsBody, ECollisionResponse::ECR_Block);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Vehicle, ECollisionResponse::ECR_Block);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Destructible, ECollisionResponse::ECR_Block);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Overlap);
+	GetClimbSurfaceDetector()->OnComponentBeginOverlap.AddDynamic(this, &AMainCharacter::OnClimbSurfaceDetectorBeginOverlap);
+	GetClimbSurfaceDetector()->OnComponentEndOverlap.AddDynamic(this, &AMainCharacter::OnClimbSurfaceDetectorEndOverlap);
+
 	// Set turn rates for pad controller
 	BaseTurnRate = 45.0f;
 	BaseLookUpRate = 45.0f;
@@ -52,6 +81,7 @@ AMainCharacter::AMainCharacter()
 
 	// Character movement setups
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+	GetCharacterMovement()->CrouchedHalfHeight = 65.0f;
 	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->GravityScale = 1.5f;
@@ -87,12 +117,35 @@ void AMainCharacter::Tick(float DeltaTime)
 			CurrentAdrenaline = FMath::Max(CurrentAdrenaline - AdrenalinePerTimeDilation, 0.0f);
 		}
 	}
+
+	// Trace check
+	if (bCanTrace == true)
+	{
+		DoTrace();
+	}
+	else
+	{
+		// TODO
+	}
 }
 
 // Called when the game starts or when spawned
 void AMainCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+
+	// HUD initialization
+	//static ConstructorHelpers::FClassFinder<UUserWidget> WidgetFinder(TEXT("/Game/Blueprints/HUD/HUDWidget"));
+	if (HUDWidget && PlayerController)
+	{
+		UUserWidget* UserWidget = UWidgetBlueprintLibrary::Create(GetWorld(), HUDWidget, PlayerController);
+		UserWidget->AddToViewport();
+	}
+
+	// Animation access util
+	Animation = Cast<UHeroAnimationInstance>(GetMesh()->GetAnimInstance());
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -140,7 +193,7 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void AMainCharacter::MoveForward(float Value)
 {
-	if (Value != 0.0f)
+	if (Value != 0.0f && !bIsHanging)
 	{
 		// Add movement in that direction
 		AddMovementInput(GetActorForwardVector(), Value);
@@ -149,7 +202,7 @@ void AMainCharacter::MoveForward(float Value)
 
 void AMainCharacter::MoveRight(float Value)
 {
-	if (Value != 0.0f)
+	if (Value != 0.0f && !bIsHanging)
 	{
 		// Add movement in that direction
 		AddMovementInput(GetActorRightVector(), Value);
@@ -229,11 +282,16 @@ void AMainCharacter::OnBlink()
 	if (bCanBlink && CurrentAdrenaline >= AdrenalinePerBlink) {
 		bBlinkIsActive = true;
 		ACharacter::Jump();
-		// Make delay
-		this->SetActorLocationAndRotation(BlinkLocation + FVector(0, 0, 100), GetCapsuleComponent()->GetComponentRotation());
-		CurrentAdrenaline = FMath::Max(CurrentAdrenaline - AdrenalinePerBlink, 0.0f);
-		bBlinkIsActive = false;
+		FTimerHandle BlinkHandle;
+		GetWorldTimerManager().SetTimer(BlinkHandle, this, &AMainCharacter::OnBlinkTimerEnd, 0.25f, false);
 	}
+}
+
+void AMainCharacter::OnBlinkTimerEnd()
+{
+	this->SetActorLocationAndRotation(BlinkLocation + FVector(0, 0, 100), GetCapsuleComponent()->GetComponentRotation());
+	CurrentAdrenaline = FMath::Max(CurrentAdrenaline - AdrenalinePerBlink, 0.0f);
+	bBlinkIsActive = false;
 }
 
 void AMainCharacter::CheckCanBlink()
@@ -241,7 +299,7 @@ void AMainCharacter::CheckCanBlink()
 	if (bIsPowered && !bBlinkIsActive)
 	{
 		// Trace a line from the camera location in the direction where the player was looking
-		FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
+		FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("BlinkTracer")), true, this);
 		RV_TraceParams.bTraceComplex = true;
 		RV_TraceParams.bTraceAsyncScene = true;
 		RV_TraceParams.bReturnPhysicalMaterial = false;
@@ -253,7 +311,7 @@ void AMainCharacter::CheckCanBlink()
 			FirstPersonCameraComponent->GetComponentLocation(), // Start
 			FirstPersonCameraComponent->GetComponentLocation() +
 			(FirstPersonCameraComponent->GetForwardVector() * BlinkMaximumDistance), // End
-			ECC_Visibility, // Collision channel
+			ECollisionChannel::ECC_Visibility, // Collision channel
 			RV_TraceParams
 		);
 
@@ -271,4 +329,191 @@ void AMainCharacter::CheckCanBlink()
 	{
 		bCanBlink = false;
 	}
+}
+
+void AMainCharacter::OnClimbSurfaceDetectorBeginOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
+{
+	bCanTrace = true;
+	//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, "Sphere can trace");
+}
+
+void AMainCharacter::OnClimbSurfaceDetectorEndOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	bCanTrace = false;
+	//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, "Sphere cannot trace");
+}
+
+void AMainCharacter::DoTrace()
+{
+	if(GetCharacterMovement()->IsFalling() && !bIsHanging) // TODO
+	{
+		// Wall tracer
+		FCollisionQueryParams RV_TraceParams_Wall = FCollisionQueryParams(FName(TEXT("WallTracer")), true, this);
+		RV_TraceParams_Wall.bTraceComplex = true;
+		RV_TraceParams_Wall.bTraceAsyncScene = true;
+		RV_TraceParams_Wall.bReturnPhysicalMaterial = false;
+
+		FHitResult RV_Hit_Wall(ForceInit);
+
+		GetWorld()->SweepSingleByChannel(
+			RV_Hit_Wall, // Result
+			GetActorLocation(), // Start
+			GetActorLocation() + (GetActorForwardVector() * FVector(150.0f, 150.0f, 0)), // End
+			FQuat(),
+			ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
+			FCollisionShape::MakeSphere(20.0f), // Radius
+			RV_TraceParams_Wall
+		);
+		//GetWorld()->DebugDrawTraceTag = FName(TEXT("WallTracer"));
+
+		if (RV_Hit_Wall.bBlockingHit)
+		{
+			WallImpact = RV_Hit_Wall.ImpactPoint;
+			WallNormal = RV_Hit_Wall.ImpactNormal;
+
+			// Roof tracer
+			FCollisionQueryParams RV_TraceParams_Roof = FCollisionQueryParams(FName(TEXT("RoofTracer")), true, this);
+			RV_TraceParams_Roof.bTraceComplex = true;
+			RV_TraceParams_Roof.bTraceAsyncScene = true;
+			RV_TraceParams_Roof.bReturnPhysicalMaterial = false;
+
+			FHitResult RV_Hit_Roof(ForceInit);
+
+			GetWorld()->SweepSingleByChannel(
+				RV_Hit_Roof, // Result
+				GetActorLocation() + (GetActorForwardVector() * 0.95f), // Start
+				GetActorLocation() + (GetActorForwardVector() * 0.95f) + FVector(0, 0, 150.0f), // End
+				FQuat(),
+				ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
+				FCollisionShape::MakeSphere(20.0f), // Radius
+				RV_TraceParams_Roof
+			);
+			//GetWorld()->DebugDrawTraceTag = FName(TEXT("RoofTracer"));
+
+			if (RV_Hit_Roof.bBlockingHit)
+			{
+				// TODO
+			}
+		}
+
+		// Height tracer: Left
+		FCollisionQueryParams RV_TraceParams_Height_Left = FCollisionQueryParams(FName(TEXT("HeightTracerLeft")), true, this);
+		RV_TraceParams_Height_Left.bTraceComplex = true;
+		RV_TraceParams_Height_Left.bTraceAsyncScene = true;
+		RV_TraceParams_Height_Left.bReturnPhysicalMaterial = false;
+
+		FHitResult RV_Hit_Height_Left(ForceInit);
+
+		GetWorld()->SweepSingleByChannel(
+			RV_Hit_Height_Left, // Result
+			GetActorLocation() + FVector(0, 0, 600.0f) + (GetActorForwardVector() * 55.0f) - (GetActorRightVector() * 35.0f), // Start
+			GetActorLocation() + FVector(0, 0, 600.0f) + (GetActorForwardVector() * 55.0f) - (GetActorRightVector() * 35.0f) - FVector(0, 0, 550.0f), // End
+			FQuat(),
+			ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
+			FCollisionShape::MakeSphere(10.0f), // Radius
+			RV_TraceParams_Height_Left
+		);
+		//GetWorld()->DebugDrawTraceTag = FName(TEXT("HeightTracerLeft"));
+
+		// Height tracer: Right
+		FCollisionQueryParams RV_TraceParams_Height_Right = FCollisionQueryParams(FName(TEXT("HeightTracerRight")), true, this);
+		RV_TraceParams_Height_Right.bTraceComplex = true;
+		RV_TraceParams_Height_Right.bTraceAsyncScene = true;
+		RV_TraceParams_Height_Right.bReturnPhysicalMaterial = false;
+
+		FHitResult RV_Hit_Height_Right(ForceInit);
+
+		GetWorld()->SweepSingleByChannel(
+			RV_Hit_Height_Right, // Result
+			GetActorLocation() + FVector(0, 0, 600.0f) + (GetActorForwardVector() * 55.0f) + (GetActorRightVector() * 35.0f), // Start
+			GetActorLocation() + FVector(0, 0, 600.0f) + (GetActorForwardVector() * 55.0f) + (GetActorRightVector() * 35.0f) - FVector(0, 0, 550.0f), // End
+			FQuat(),
+			ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
+			FCollisionShape::MakeSphere(10.0f), // Radius
+			RV_TraceParams_Height_Right
+		);
+		//GetWorld()->DebugDrawTraceTag = FName(TEXT("HeightTracerRight"));
+
+		if (RV_Hit_Height_Left.bBlockingHit && RV_Hit_Height_Right.bBlockingHit)
+		{
+			//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, "Height tracer succeed");
+			LedgeHeight = RV_Hit_Height_Left.ImpactPoint; // We take the left impact point, at the moment
+
+			// Climbing checks - Good location?????????????????????????????????????????????????????????????????????????????????
+			if (true) // TODO
+			{
+				if ((((GetMesh()->GetSocketLocation(TEXT("HipSocket"))).Z - (LedgeHeight.Z)) > -70.0f)
+					&& (((GetMesh()->GetSocketLocation(TEXT("HipSocket"))).Z - (LedgeHeight.Z)) < 0.0f))
+				{
+					GrabLedge();
+				}
+				else
+				{
+					ResetGrabLedge();
+					KneeClimb();
+				}
+			}
+		}
+	}
+}
+
+void AMainCharacter::GrabLedge()
+{
+	if (bGrabLedgeDoOnce)
+	{
+		if (!bIsClimbingLedge)
+		{
+			Animation->bIsHanging = true;
+
+			GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+			bIsHanging = true;
+			bUseControllerRotationYaw = false;
+
+			FLatentActionInfo GrabLedgeMoveLatentInfo;
+			GrabLedgeMoveLatentInfo.CallbackTarget = this;
+			UKismetSystemLibrary::MoveComponentTo(RootComponent, 
+				FVector(
+					(WallNormal * FVector(42.0f, 42.0f, 42.0f)).X + WallImpact.X, 
+					(WallNormal * FVector(42.0f, 42.0f, 42.0f)).Y + WallImpact.Y,
+					LedgeHeight.Z - 95.0f), 
+				AlignToWall(), 
+				false, // Ease Out
+				false, // Ease In
+				0.2f, // Over Time
+				true, // Force Rotation Shortest Path
+				EMoveComponentAction::Move, // Movement Type
+				GrabLedgeMoveLatentInfo);
+
+			GetCharacterMovement()->StopMovementImmediately();
+			
+			// TODO
+		}
+
+		bGrabLedgeDoOnce = false;
+	}
+}
+
+void AMainCharacter::ResetGrabLedge()
+{
+	bGrabLedgeDoOnce = true;
+}
+
+void AMainCharacter::KneeClimb()
+{
+
+}
+
+FRotator AMainCharacter::AlignToWall()
+{
+	return UKismetMathLibrary::MakeRotFromXZ((WallNormal * FVector(-1, -1, 0)), GetCapsuleComponent()->GetUpVector());
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Interface
+
+void AMainCharacter::HUDInterface_Implementation(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface)
+{
+	bCanBlink_Interface = bCanBlink;
+	CurrentAdrenaline_Interface = CurrentAdrenaline;
+	MaximumAdrenaline_Interface = MaximumAdrenaline;
 }
