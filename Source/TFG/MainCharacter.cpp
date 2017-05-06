@@ -52,6 +52,21 @@ AMainCharacter::AMainCharacter()
 	GetFirstPersonCameraComponent()->SetupAttachment(FirstPersonCameraArm);
 	GetFirstPersonCameraComponent()->bUsePawnControlRotation = true;
 	GetFirstPersonCameraComponent()->FieldOfView = 95.0f;
+	GetFirstPersonCameraComponent()->bAutoActivate = true;
+
+	// Third person camera arm
+	ThirdPersonCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("ThirdPersonCameraArm"));
+	GetThirdPersonCameraArm()->SetupAttachment(GetMesh(), TEXT("HeadSocket"));
+	GetThirdPersonCameraArm()->RelativeRotation = FRotator(0.0f, 90.0f, -90.0f);
+	GetThirdPersonCameraArm()->TargetArmLength = 200.0f;
+	GetThirdPersonCameraArm()->bUsePawnControlRotation = true;
+
+	// Third person camera
+	ThirdPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("ThirdPersonCamera"));
+	GetThirdPersonCameraComponent()->SetupAttachment(ThirdPersonCameraArm);
+	//GetThirdPersonCameraComponent()->bUsePawnControlRotation = true;
+	GetThirdPersonCameraComponent()->FieldOfView = 95.0f;
+	GetThirdPersonCameraComponent()->bAutoActivate = false;
 
 	// Climb detector
 	ClimbSurfaceDetector = CreateDefaultSubobject<USphereComponent>(TEXT("ClimbSurfaceDetector"));
@@ -189,6 +204,9 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	// Special Power: Blink
 	PlayerInputComponent->BindAction("Blink", IE_Pressed, this, &AMainCharacter::OnBlink);
+
+	// Util: Camera toggle
+	PlayerInputComponent->BindAction("CameraToggle", IE_Pressed, this, &AMainCharacter::OnCameraToggle);
 }
 
 void AMainCharacter::MoveForward(float Value)
@@ -329,6 +347,12 @@ void AMainCharacter::CheckCanBlink()
 	{
 		bCanBlink = false;
 	}
+}
+
+void AMainCharacter::OnCameraToggle()
+{
+	GetFirstPersonCameraComponent()->ToggleActive();
+	GetThirdPersonCameraComponent()->ToggleActive();
 }
 
 void AMainCharacter::OnClimbSurfaceDetectorBeginOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
@@ -473,8 +497,8 @@ void AMainCharacter::GrabLedge()
 			GrabLedgeMoveLatentInfo.CallbackTarget = this;
 			UKismetSystemLibrary::MoveComponentTo(RootComponent, 
 				FVector(
-					(WallNormal * FVector(42.0f, 42.0f, 42.0f)).X + WallImpact.X, 
-					(WallNormal * FVector(42.0f, 42.0f, 42.0f)).Y + WallImpact.Y,
+					(WallNormal * FVector(CapsuleRadius, CapsuleRadius, CapsuleRadius)).X + WallImpact.X,
+					(WallNormal * FVector(CapsuleRadius, CapsuleRadius, CapsuleRadius)).Y + WallImpact.Y,
 					LedgeHeight.Z - 95.0f), 
 				AlignToWall(), 
 				false, // Ease Out

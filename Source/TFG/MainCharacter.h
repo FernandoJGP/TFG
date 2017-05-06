@@ -20,6 +20,14 @@ class TFG_API AMainCharacter : public ACharacter, public IHUDInterface
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* FirstPersonCameraArm;
 
+	// Third person camera
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	class UCameraComponent* ThirdPersonCameraComponent;
+
+	// Third person camera spring arm
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	class USpringArmComponent* ThirdPersonCameraArm;
+
 	// Climb surface detector
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ClimbDetector", meta = (AllowPrivateAccess = "true"))
 	USphereComponent* ClimbSurfaceDetector;
@@ -167,6 +175,9 @@ private:
 	void CheckCanBlink();
 	void OnBlinkTimerEnd();
 
+	// Camera toggle
+	void OnCameraToggle();
+
 	// Climb surface detector
 	UFUNCTION()
 	void OnClimbSurfaceDetectorBeginOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
@@ -195,5 +206,7 @@ private:
 public:
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 	FORCEINLINE class USpringArmComponent* GetFirstPersonCameraArm() const { return FirstPersonCameraArm; }
+	FORCEINLINE class UCameraComponent* GetThirdPersonCameraComponent() const { return ThirdPersonCameraComponent; }
+	FORCEINLINE class USpringArmComponent* GetThirdPersonCameraArm() const { return ThirdPersonCameraArm; }
 	FORCEINLINE class USphereComponent* GetClimbSurfaceDetector() const { return ClimbSurfaceDetector; }
 };
