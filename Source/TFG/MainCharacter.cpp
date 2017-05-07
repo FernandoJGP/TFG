@@ -184,6 +184,8 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAxis("TurnRate", this, &AMainCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AMainCharacter::LookUpAtRate);
 
+	PlayerInputComponent->BindAxis("RotationTrick", this, &AMainCharacter::RotationTrick);
+
 	// Action Button
 	PlayerInputComponent->BindAction("Action", IE_Pressed, this, &AMainCharacter::OnAction);
 
@@ -237,6 +239,11 @@ void AMainCharacter::LookUpAtRate(float Rate)
 {
 	// Calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AMainCharacter::RotationTrick(float Rate)
+{
+	Animation->Rotation = Rate;
 }
 
 void AMainCharacter::OnAction()

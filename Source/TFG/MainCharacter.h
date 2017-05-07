@@ -154,6 +154,9 @@ private:
 	// Vertical camera movement for pad controllers
 	void LookUpAtRate(float Rate);
 
+	// Tick to know when the player is on rotation
+	void RotationTrick(float Rate);
+
 	// Action button
 	void OnAction();
 
