@@ -120,6 +120,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
 		bool bIsHanging = false;
 
+	// Stores if the player is braced hanging
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+		bool bCanBraceHang = false;
+
 	// Stores if the player is climbing
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
 		bool bIsClimbingLedge = false;

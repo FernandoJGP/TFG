@@ -486,6 +486,61 @@ void AMainCharacter::DoTrace()
 			}
 		}
 	}
+	else
+	{
+		if (bIsHanging)
+		{
+			// Foot tracer: Left
+			FCollisionQueryParams RV_TraceParams_Foot_Left = FCollisionQueryParams(FName(TEXT("FootTracerLeft")), true, this);
+			RV_TraceParams_Foot_Left.bTraceComplex = true;
+			RV_TraceParams_Foot_Left.bTraceAsyncScene = true;
+			RV_TraceParams_Foot_Left.bReturnPhysicalMaterial = false;
+
+			FHitResult RV_Hit_Foot_Left(ForceInit);
+
+			GetWorld()->SweepSingleByChannel(
+				RV_Hit_Foot_Left, // Result
+				GetActorLocation() + FVector(0, 0, -50.0f) - (GetActorRightVector() * 35.0f), // Start
+				GetActorLocation() + FVector(0, 0, -50.0f) + (GetActorForwardVector() * FVector(50.0f, 50.0f, 0)) - (GetActorRightVector() * 35.0f), // End
+				FQuat(),
+				ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
+				FCollisionShape::MakeSphere(10.0f), // Radius
+				RV_TraceParams_Foot_Left
+			);
+			//GetWorld()->DebugDrawTraceTag = FName(TEXT("FootTracerLeft"));
+
+			// Foot tracer: Right
+			FCollisionQueryParams RV_TraceParams_Foot_Right = FCollisionQueryParams(FName(TEXT("FootTracerRight")), true, this);
+			RV_TraceParams_Foot_Right.bTraceComplex = true;
+			RV_TraceParams_Foot_Right.bTraceAsyncScene = true;
+			RV_TraceParams_Foot_Right.bReturnPhysicalMaterial = false;
+
+			FHitResult RV_Hit_Foot_Right(ForceInit);
+
+			GetWorld()->SweepSingleByChannel(
+				RV_Hit_Foot_Right, // Result
+				GetActorLocation() + FVector(0, 0, -50.0f) + (GetActorRightVector() * 35.0f), // Start
+				GetActorLocation() + FVector(0, 0, -50.0f) + (GetActorForwardVector() * FVector(50.0f, 50.0f, 0)) + (GetActorRightVector() * 35.0f), // End
+				FQuat(),
+				ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
+				FCollisionShape::MakeSphere(10.0f), // Radius
+				RV_TraceParams_Foot_Right
+			);
+			//GetWorld()->DebugDrawTraceTag = FName(TEXT("FootTracerRight"));
+
+			// If the two traces hit, the character can keep their feet close to the wall (braced hanging)
+			if (RV_Hit_Foot_Left.bBlockingHit && RV_Hit_Foot_Right.bBlockingHit)
+			{
+				bCanBraceHang = true;
+				Animation->bCanBraceHang = true;
+			}
+			else
+			{
+				bCanBraceHang = false;
+				Animation->bCanBraceHang = false;
+			}
+		}
+	}
 }
 
 void AMainCharacter::GrabLedge()
