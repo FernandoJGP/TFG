@@ -194,6 +194,7 @@ private:
 	void DoTrace();
 	void GrabLedge();
 	void ResetGrabLedge();
+	void LeaveLedge();
 	void KneeClimb();
 	FRotator AlignToWall();
 

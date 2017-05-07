@@ -264,7 +264,14 @@ void AMainCharacter::OnSprintReleased()
 
 void AMainCharacter::OnCrouchPressed()
 {
-	Crouch();
+	if(!bIsHanging)
+	{
+		Crouch();
+	}
+	else
+	{
+		LeaveLedge();
+	}
 }
 
 void AMainCharacter::OnCrouchReleased()
@@ -582,6 +589,17 @@ void AMainCharacter::GrabLedge()
 void AMainCharacter::ResetGrabLedge()
 {
 	bGrabLedgeDoOnce = true;
+}
+
+void AMainCharacter::LeaveLedge()
+{
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	Animation->bIsHanging = false;
+	Animation->bCanBraceHang = false;
+	bIsHanging = false;
+	bCanBraceHang = false;
+	bUseControllerRotationYaw = true;
+	// TODO
 }
 
 void AMainCharacter::KneeClimb()
