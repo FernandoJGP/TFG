@@ -196,6 +196,7 @@ private:
 	void ResetGrabLedge();
 	void LeaveLedge();
 	void KneeClimb();
+	void GrabLedgeMove(float Value);
 	FRotator AlignToWall();
 
 // Interface methods
