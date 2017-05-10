@@ -222,10 +222,17 @@ void AMainCharacter::MoveForward(float Value)
 
 void AMainCharacter::MoveRight(float Value)
 {
-	if (Value != 0.0f && !bIsHanging)
+	if (!bIsHanging)
 	{
-		// Add movement in that direction
-		AddMovementInput(GetActorRightVector(), Value);
+		if (Value != 0.0f)
+		{
+			// Add movement in that direction
+			AddMovementInput(GetActorRightVector(), Value);
+		}
+	}
+	else
+	{
+		GrabLedgeMove(Value);
 	}
 }
 
@@ -243,7 +250,7 @@ void AMainCharacter::LookUpAtRate(float Rate)
 
 void AMainCharacter::RotationTrick(float Rate)
 {
-	Animation->Rotation = Rate;
+	Animation->RotationInput = Rate;
 }
 
 void AMainCharacter::OnAction()
@@ -568,7 +575,7 @@ void AMainCharacter::GrabLedge()
 				FVector(
 					(WallNormal * FVector(CapsuleRadius, CapsuleRadius, CapsuleRadius)).X + WallImpact.X,
 					(WallNormal * FVector(CapsuleRadius, CapsuleRadius, CapsuleRadius)).Y + WallImpact.Y,
-					LedgeHeight.Z - 95.0f), 
+					LedgeHeight.Z - 116.0f), 
 				AlignToWall(), 
 				false, // Ease Out
 				false, // Ease In
@@ -605,6 +612,149 @@ void AMainCharacter::LeaveLedge()
 void AMainCharacter::KneeClimb()
 {
 
+}
+
+void AMainCharacter::GrabLedgeMove(float Value)
+{
+	if (Value == 0.0f) // TODO
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+		Animation->GrabRightInput = 0.0f;
+		Animation->GrabLookingRightInput = 0.0f;
+	}
+	else
+	{
+		if (Value > 0)
+		{
+			// Grab tracer: Right
+			FCollisionQueryParams RV_TraceParams_Grab_Right = FCollisionQueryParams(FName(TEXT("GrabTracerRight")), true, this);
+			RV_TraceParams_Grab_Right.bTraceComplex = true;
+			RV_TraceParams_Grab_Right.bTraceAsyncScene = true;
+			RV_TraceParams_Grab_Right.bReturnPhysicalMaterial = false;
+
+			FHitResult RV_Hit_Grab_Right(ForceInit);
+
+			GetWorld()->SweepSingleByChannel(
+				RV_Hit_Grab_Right, // Result
+				GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) + (GetActorRightVector() * 50.0f), // Start
+				GetActorLocation() + FVector(0, 0, 85.0f) + (GetActorForwardVector() * 50.0f) + (GetActorRightVector() * 50.0f), // End
+				FQuat(),
+				ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
+				FCollisionShape::MakeSphere(10.0f), // Radius
+				RV_TraceParams_Grab_Right
+			);
+			//GetWorld()->DebugDrawTraceTag = FName(TEXT("GrabTracerRight"));
+
+			if (RV_Hit_Grab_Right.bBlockingHit)
+			{
+				Animation->GrabRightInput = Value;
+				Animation->GrabLookingRightInput = 0.0f;
+				AddMovementInput(GetActorRightVector(), Value/5);
+				bIsGrabingLookingSide = false;
+			}
+			else
+			{
+				GetMovementComponent()->StopMovementImmediately();
+
+				// Grab look tracer: Right
+				FCollisionQueryParams RV_TraceParams_Grab_Look_Right = FCollisionQueryParams(FName(TEXT("GrabLookTracerRight")), true, this);
+				RV_TraceParams_Grab_Look_Right.bTraceComplex = true;
+				RV_TraceParams_Grab_Look_Right.bTraceAsyncScene = true;
+				RV_TraceParams_Grab_Look_Right.bReturnPhysicalMaterial = false;
+
+				FHitResult RV_Hit_Grab_Look_Right(ForceInit);
+
+				GetWorld()->SweepSingleByChannel(
+					RV_Hit_Grab_Look_Right, // Result
+					GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) + (GetActorRightVector() * FVector(50.0f, 50.0f, 0.0f)), // Start
+					GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) + (GetActorRightVector() * 350.0f), // End
+					FQuat(),
+					ECollisionChannel::ECC_Visibility, // Collision channel
+					FCollisionShape::MakeSphere(10.0f), // Radius
+					RV_TraceParams_Grab_Look_Right
+				);
+				//GetWorld()->DebugDrawTraceTag = FName(TEXT("GrabLookTracerRight"));
+
+				if (RV_Hit_Grab_Look_Right.bBlockingHit)
+				{
+					Animation->GrabRightInput = 0.0f;
+					Animation->GrabLookingRightInput = 0.0f;
+					bIsGrabingLookingSide = false;
+				}
+				else
+				{
+					Animation->GrabRightInput = 0.0f;
+					Animation->GrabLookingRightInput = Value;
+					bIsGrabingLookingSide = true;
+				}
+			}
+		}
+		else
+		{
+			// Grab tracer: Left
+			FCollisionQueryParams RV_TraceParams_Grab_Left = FCollisionQueryParams(FName(TEXT("GrabTracerLeft")), true, this);
+			RV_TraceParams_Grab_Left.bTraceComplex = true;
+			RV_TraceParams_Grab_Left.bTraceAsyncScene = true;
+			RV_TraceParams_Grab_Left.bReturnPhysicalMaterial = false;
+
+			FHitResult RV_Hit_Grab_Left(ForceInit);
+
+			GetWorld()->SweepSingleByChannel(
+				RV_Hit_Grab_Left, // Result
+				GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * FVector(50.0f, 50.0f, 0.0f)), // Start
+				GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 350.0f), // End
+				FQuat(),
+				ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
+				FCollisionShape::MakeSphere(10.0f), // Radius
+				RV_TraceParams_Grab_Left
+			);
+			//GetWorld()->DebugDrawTraceTag = FName(TEXT("GrabTracerLeft"));
+
+			if (RV_Hit_Grab_Left.bBlockingHit)
+			{
+				Animation->GrabRightInput = Value;
+				Animation->GrabLookingRightInput = 0.0f;
+				AddMovementInput(GetActorRightVector(), Value/5);
+				bIsGrabingLookingSide = false;
+			}
+			else
+			{
+				GetMovementComponent()->StopMovementImmediately();
+
+				// Grab look tracer: Left
+				FCollisionQueryParams RV_TraceParams_Grab_Look_Left = FCollisionQueryParams(FName(TEXT("GrabLookTracerLeft")), true, this);
+				RV_TraceParams_Grab_Look_Left.bTraceComplex = true;
+				RV_TraceParams_Grab_Look_Left.bTraceAsyncScene = true;
+				RV_TraceParams_Grab_Look_Left.bReturnPhysicalMaterial = false;
+
+				FHitResult RV_Hit_Grab_Look_Left(ForceInit);
+
+				GetWorld()->SweepSingleByChannel(
+					RV_Hit_Grab_Look_Left, // Result
+					GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 50.0f), // Start
+					GetActorLocation() + FVector(0, 0, 85.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 50.0f), // End
+					FQuat(),
+					ECollisionChannel::ECC_Visibility, // Collision channel
+					FCollisionShape::MakeSphere(10.0f), // Radius
+					RV_TraceParams_Grab_Look_Left
+				);
+				//GetWorld()->DebugDrawTraceTag = FName(TEXT("GrabLookTracerLeft"));
+
+				if (RV_Hit_Grab_Look_Left.bBlockingHit)
+				{
+					Animation->GrabRightInput = 0.0f;
+					Animation->GrabLookingRightInput = 0.0f;
+					bIsGrabingLookingSide = false;
+				}
+				else
+				{
+					Animation->GrabRightInput = 0.0f;
+					Animation->GrabLookingRightInput = Value;
+					bIsGrabingLookingSide = true;
+				}
+			}
+		}
+	}
 }
 
 FRotator AMainCharacter::AlignToWall()

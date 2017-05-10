@@ -120,9 +120,17 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
 		bool bIsHanging = false;
 
-	// Stores if the player is braced hanging
+	// Stores if the player can do braced hanging
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
 		bool bCanBraceHang = false;
+
+	// Stores if the player is hanging looking to a side
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+		bool bIsGrabingLookingSide = false;
+
+	// Stores if the player is hanging looking rear
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+		bool bIsGrabingLookingRear = false;
 
 	// Stores if the player is climbing
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
@@ -196,6 +204,7 @@ private:
 	void ResetGrabLedge();
 	void LeaveLedge();
 	void KneeClimb();
+	void GrabLedgeMove(float Value);
 	FRotator AlignToWall();
 
 // Interface methods
