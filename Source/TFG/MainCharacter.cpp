@@ -149,7 +149,7 @@ void AMainCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	PlayerController = Cast<APlayerController>(GetController());
 
 	// HUD initialization
 	//static ConstructorHelpers::FClassFinder<UUserWidget> WidgetFinder(TEXT("/Game/Blueprints/HUD/HUDWidget"));
@@ -875,7 +875,10 @@ void AMainCharacter::JumpGrabbingSide()
 
 void AMainCharacter::JumpGrabbingRear()
 {
-
+	LeaveLedge();
+	LaunchCharacter((WallNormal * 500) + FVector(0, 0, 300.0f), false, false);
+	PlayerController->SetControlRotation(GetActorRotation() + FRotator(0, 180.0f, 0));
+	// TODO: Camera restrictions
 }
 
 FRotator AMainCharacter::AlignToWall()

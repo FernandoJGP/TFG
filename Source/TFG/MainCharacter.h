@@ -224,6 +224,10 @@ public:
 
 //Util methods
 private:
+	// Player controller util
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Controller", meta = (AllowPrivateAccess = "true"))
+	class APlayerController* PlayerController;
+
 	// Animation util
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 	class UHeroAnimationInstance* Animation;
