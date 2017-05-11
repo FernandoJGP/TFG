@@ -176,6 +176,9 @@ private:
 	void OnSprintPressed();
 	void OnSprintReleased();
 
+	// Jump
+	void OnJump();
+
 	// Crouch
 	void OnCrouchPressed();
 	void OnCrouchReleased();
@@ -203,10 +206,13 @@ private:
 	void GrabLedge();
 	void ResetGrabLedge();
 	void LeaveLedge();
-	void KneeClimb();
-	void GrabLedgeMove(float Value);
+	void ClimbLedge();
+	void KneeClimbLedge();
+	void GrabLedgeMove();
 	void GrabLedgeRear();
 	void GrabLedgeRearCancel();
+	void JumpGrabbingSide();
+	void JumpGrabbingRear();
 
 	FRotator AlignToWall();
 

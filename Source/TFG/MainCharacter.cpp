@@ -194,7 +194,7 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &AMainCharacter::OnSprintReleased);
 
 	// Jump
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMainCharacter::OnJump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
 	// Crouch
@@ -252,7 +252,7 @@ void AMainCharacter::MoveRight(float Value)
 	{
 		if (!bIsGrabbingLookingRear)
 		{
-			GrabLedgeMove(Value);
+			GrabLedgeMove();
 		}
 	}
 }
@@ -288,6 +288,32 @@ void AMainCharacter::OnSprintPressed()
 void AMainCharacter::OnSprintReleased()
 {
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AMainCharacter::OnJump()
+{
+	if (!bIsHanging)
+	{
+		ACharacter::Jump();
+	}
+	else
+	{
+		if (bIsGrabbingLookingRear)
+		{
+			AMainCharacter::JumpGrabbingRear();
+		}
+		else
+		{
+			if (bIsGrabbingLookingSide)
+			{
+				AMainCharacter::JumpGrabbingSide();
+			}
+			else
+			{
+				AMainCharacter::ClimbLedge();
+			}
+		}
+	}
 }
 
 void AMainCharacter::OnCrouchPressed()
@@ -516,7 +542,7 @@ void AMainCharacter::DoTrace()
 				else
 				{
 					ResetGrabLedge();
-					KneeClimb();
+					KneeClimbLedge();
 				}
 			}
 		}
@@ -624,20 +650,38 @@ void AMainCharacter::LeaveLedge()
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 	Animation->bIsHanging = false;
 	Animation->bCanBraceHang = false;
+	Animation->GrabRightInput = 0.0f;
+	Animation->GrabLookingRightInput = 0.0f;
+	Animation->bIsGrabingAndLookingRear = false;
 	bIsHanging = false;
 	bCanBraceHang = false;
+	bIsGrabbingLookingSide = false;
+	bIsGrabbingLookingRear = false;
 	bUseControllerRotationYaw = true;
 	// TODO
 }
 
-void AMainCharacter::KneeClimb()
+void AMainCharacter::ClimbLedge()
+{
+	Animation->bIsHanging = false;
+	Animation->bCanBraceHang = false;
+	Animation->GrabRightInput = 0.0f;
+	Animation->GrabLookingRightInput = 0.0f;
+	Animation->bIsGrabingAndLookingRear = false;
+	bIsHanging = false;
+	bCanBraceHang = false;
+	bIsGrabbingLookingSide = false;
+	bIsGrabbingLookingRear = false;
+}
+
+void AMainCharacter::KneeClimbLedge()
 {
 
 }
 
-void AMainCharacter::GrabLedgeMove(float Value)
+void AMainCharacter::GrabLedgeMove()
 {
-	if (Value == 0.0f) // TODO
+	if (GetInputAxisValue(TEXT("MoveRight")) == 0.0f) // TODO
 	{
 		GetCharacterMovement()->StopMovementImmediately();
 		Animation->GrabRightInput = 0.0f;
@@ -645,7 +689,7 @@ void AMainCharacter::GrabLedgeMove(float Value)
 	}
 	else
 	{
-		if (Value > 0)
+		if (GetInputAxisValue(TEXT("MoveRight")) > 0)
 		{
 			// Grab tracer: Right
 			FCollisionQueryParams RV_TraceParams_Grab_Right = FCollisionQueryParams(FName(TEXT("GrabTracerRight")), true, this);
@@ -668,9 +712,16 @@ void AMainCharacter::GrabLedgeMove(float Value)
 
 			if (RV_Hit_Grab_Right.bBlockingHit)
 			{
-				Animation->GrabRightInput = Value;
+				Animation->GrabRightInput = GetInputAxisValue(TEXT("MoveRight"));
 				Animation->GrabLookingRightInput = 0.0f;
-				AddMovementInput(GetActorRightVector(), Value/5);
+				if (bCanBraceHang)
+				{
+					AddMovementInput(GetActorRightVector(), GetInputAxisValue(TEXT("MoveRight")) / 5);
+				}
+				else
+				{
+					AddMovementInput(GetActorRightVector(), GetInputAxisValue(TEXT("MoveRight")) / 8);
+				}
 				bIsGrabbingLookingSide = false;
 			}
 			else
@@ -705,7 +756,7 @@ void AMainCharacter::GrabLedgeMove(float Value)
 				else
 				{
 					Animation->GrabRightInput = 0.0f;
-					Animation->GrabLookingRightInput = Value;
+					Animation->GrabLookingRightInput = GetInputAxisValue(TEXT("MoveRight"));
 					bIsGrabbingLookingSide = true;
 				}
 			}
@@ -722,8 +773,8 @@ void AMainCharacter::GrabLedgeMove(float Value)
 
 			GetWorld()->SweepSingleByChannel(
 				RV_Hit_Grab_Left, // Result
-				GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * FVector(50.0f, 50.0f, 0.0f)), // Start
-				GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 350.0f), // End
+				GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 50.0f), // Start
+				GetActorLocation() + FVector(0, 0, 85.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 50.0f), // End
 				FQuat(),
 				ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
 				FCollisionShape::MakeSphere(10.0f), // Radius
@@ -733,9 +784,16 @@ void AMainCharacter::GrabLedgeMove(float Value)
 
 			if (RV_Hit_Grab_Left.bBlockingHit)
 			{
-				Animation->GrabRightInput = Value;
+				Animation->GrabRightInput = GetInputAxisValue(TEXT("MoveRight"));
 				Animation->GrabLookingRightInput = 0.0f;
-				AddMovementInput(GetActorRightVector(), Value/5);
+				if (bCanBraceHang)
+				{
+					AddMovementInput(GetActorRightVector(), GetInputAxisValue(TEXT("MoveRight")) / 5);
+				}
+				else
+				{
+					AddMovementInput(GetActorRightVector(), GetInputAxisValue(TEXT("MoveRight")) / 8);
+				}
 				bIsGrabbingLookingSide = false;
 			}
 			else
@@ -752,8 +810,8 @@ void AMainCharacter::GrabLedgeMove(float Value)
 
 				GetWorld()->SweepSingleByChannel(
 					RV_Hit_Grab_Look_Left, // Result
-					GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 50.0f), // Start
-					GetActorLocation() + FVector(0, 0, 85.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 50.0f), // End
+					GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * FVector(50.0f, 50.0f, 0.0f)), // Start
+					GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 350.0f), // End
 					FQuat(),
 					ECollisionChannel::ECC_Visibility, // Collision channel
 					FCollisionShape::MakeSphere(10.0f), // Radius
@@ -770,7 +828,7 @@ void AMainCharacter::GrabLedgeMove(float Value)
 				else
 				{
 					Animation->GrabRightInput = 0.0f;
-					Animation->GrabLookingRightInput = Value;
+					Animation->GrabLookingRightInput = GetInputAxisValue(TEXT("MoveRight"));
 					bIsGrabbingLookingSide = true;
 				}
 			}
@@ -796,6 +854,28 @@ void AMainCharacter::GrabLedgeRearCancel()
 		Animation->bIsGrabingAndLookingRear = false;
 		// TODO: Camera restrictions
 	}
+}
+
+void AMainCharacter::JumpGrabbingSide()
+{
+	LeaveLedge();
+	if (GetInputAxisValue(TEXT("MoveRight")) > 0.0f)
+	{
+		LaunchCharacter((GetActorRightVector() * 500.0f) + FVector(0, 0, 600.0f), false, false);
+	}
+	else
+	{
+		if (GetInputAxisValue(TEXT("MoveRight")) < 0.0f)
+		{
+			LaunchCharacter((UKismetMathLibrary::NegateVector(GetActorRightVector()) * 500.0f) + FVector(0, 0, 600.0f), false, false);
+		}
+	}
+	// TODO: Camera restrictions
+}
+
+void AMainCharacter::JumpGrabbingRear()
+{
+
 }
 
 FRotator AMainCharacter::AlignToWall()
