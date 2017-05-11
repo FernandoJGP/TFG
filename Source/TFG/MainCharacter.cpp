@@ -650,7 +650,7 @@ void AMainCharacter::GrabLedgeMove(float Value)
 				Animation->GrabRightInput = Value;
 				Animation->GrabLookingRightInput = 0.0f;
 				AddMovementInput(GetActorRightVector(), Value/5);
-				bIsGrabingLookingSide = false;
+				bIsGrabbingLookingSide = false;
 			}
 			else
 			{
@@ -679,13 +679,13 @@ void AMainCharacter::GrabLedgeMove(float Value)
 				{
 					Animation->GrabRightInput = 0.0f;
 					Animation->GrabLookingRightInput = 0.0f;
-					bIsGrabingLookingSide = false;
+					bIsGrabbingLookingSide = false;
 				}
 				else
 				{
 					Animation->GrabRightInput = 0.0f;
 					Animation->GrabLookingRightInput = Value;
-					bIsGrabingLookingSide = true;
+					bIsGrabbingLookingSide = true;
 				}
 			}
 		}
@@ -715,7 +715,7 @@ void AMainCharacter::GrabLedgeMove(float Value)
 				Animation->GrabRightInput = Value;
 				Animation->GrabLookingRightInput = 0.0f;
 				AddMovementInput(GetActorRightVector(), Value/5);
-				bIsGrabingLookingSide = false;
+				bIsGrabbingLookingSide = false;
 			}
 			else
 			{
@@ -744,13 +744,13 @@ void AMainCharacter::GrabLedgeMove(float Value)
 				{
 					Animation->GrabRightInput = 0.0f;
 					Animation->GrabLookingRightInput = 0.0f;
-					bIsGrabingLookingSide = false;
+					bIsGrabbingLookingSide = false;
 				}
 				else
 				{
 					Animation->GrabRightInput = 0.0f;
 					Animation->GrabLookingRightInput = Value;
-					bIsGrabingLookingSide = true;
+					bIsGrabbingLookingSide = true;
 				}
 			}
 		}

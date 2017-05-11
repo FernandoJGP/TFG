@@ -126,11 +126,11 @@ public:
 
 	// Stores if the player is hanging looking to a side
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		bool bIsGrabingLookingSide = false;
+		bool bIsGrabbingLookingSide = false;
 
 	// Stores if the player is hanging looking rear
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		bool bIsGrabingLookingRear = false;
+		bool bIsGrabbingLookingRear = false;
 
 	// Stores if the player is climbing
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
