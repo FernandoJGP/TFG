@@ -58,15 +58,15 @@ public:
 
 	// Stores if the player has powers currently
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Power")
-		bool bIsPowered = true; // For debugging
+	bool bIsPowered = true; // For debugging
 
 	// Maximum adrenaline that the player can store
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Adrenaline Management")
-		float MaximumAdrenaline = 1000.0f;
+	float MaximumAdrenaline = 1000.0f;
 
 	// Current adrenaline that the player have
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Adrenaline Management")
-		float CurrentAdrenaline = MaximumAdrenaline;
+	float CurrentAdrenaline = MaximumAdrenaline;
 
 	// Adrenaline recovered per tick
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Adrenaline Management")
@@ -74,83 +74,83 @@ public:
 
 	// Checks if time dilation it's active
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
-		bool bTimeDilationIsActive;
+	bool bTimeDilationIsActive;
 
 	// Bullet time world rate
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
-		float TimeDilationWorldRate = 0.25f;
+	float TimeDilationWorldRate = 0.25f;
 
 	// Bullet time player rate
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
-		float TimeDilationPlayerRate = 0.5f;
+	float TimeDilationPlayerRate = 0.5f;
 
 	// Adrenaline that the player loss per tick when use bullet time
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
-		float AdrenalinePerTimeDilation = 2.5f;
+	float AdrenalinePerTimeDilation = 2.5f;
 
 	// Stores if the player can blink
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
-		bool bCanBlink;
+	bool bCanBlink;
 
 	// Stores if the player is teleporting himself
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
-		bool bBlinkIsActive;
+	bool bBlinkIsActive;
 
 	// Maximum blink distance
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
-		float BlinkMaximumDistance = 2048.0f;
+	float BlinkMaximumDistance = 2048.0f;
 
 	// Stores the blink impact point
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
-		FVector BlinkLocation;
+	FVector BlinkLocation;
 
 	// Adrenaline that the player loss when use blink
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
-		float AdrenalinePerBlink = 250.0f;
+	float AdrenalinePerBlink = 250.0f;
 
 	// User widget
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HUD")
-		TSubclassOf<class UUserWidget> HUDWidget;
+	TSubclassOf<class UUserWidget> HUDWidget;
 
 	// Stores if the player can trace
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		bool bCanTrace = false;
+	bool bCanTrace = false;
 
 	// Stores if the player is hanging
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		bool bIsHanging = false;
+	bool bIsHanging = false;
 
 	// Stores if the player can do braced hanging
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		bool bCanBraceHang = false;
+	bool bCanBraceHang = false;
 
 	// Stores if the player is hanging looking to a side
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		bool bIsGrabbingLookingSide = false;
+	bool bIsGrabbingLookingSide = false;
 
 	// Stores if the player is hanging looking rear
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		bool bIsGrabbingLookingRear = false;
+	bool bIsGrabbingLookingRear = false;
 
 	// Stores if the player is climbing
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		bool bIsClimbingLedge = false;
+	bool bIsClimbingLedge = false;
 
 	// Stores the ledge height point
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		FVector LedgeHeight;
+	FVector LedgeHeight;
 
 	// Stores the wall impact point
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		FVector WallImpact;
+	FVector WallImpact;
 
 	// Stores the wall impact normal
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		FVector WallNormal;
+	FVector WallNormal;
 
 	// Stores the wall impact normal
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-		bool bGrabLedgeDoOnce = true;
+	bool bGrabLedgeDoOnce = true;
 
 // Functions
 private:
