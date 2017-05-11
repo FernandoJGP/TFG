@@ -213,10 +213,28 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void AMainCharacter::MoveForward(float Value)
 {
-	if (Value != 0.0f && !bIsHanging)
+	
+	if (!bIsHanging)
 	{
-		// Add movement in that direction
-		AddMovementInput(GetActorForwardVector(), Value);
+		if (Value != 0.0f)
+		{
+			// Add movement in that direction
+			AddMovementInput(GetActorForwardVector(), Value);
+		}
+	}
+	else
+	{
+		if (bCanBraceHang)
+		{
+			if (Value < 0.0f)
+			{
+				GrabLedgeRear();
+			}
+			else
+			{
+				GrabLedgeRearCancel();
+			}
+		}
 	}
 }
 
@@ -232,7 +250,10 @@ void AMainCharacter::MoveRight(float Value)
 	}
 	else
 	{
-		GrabLedgeMove(Value);
+		if (!bIsGrabbingLookingRear)
+		{
+			GrabLedgeMove(Value);
+		}
 	}
 }
 
@@ -754,6 +775,26 @@ void AMainCharacter::GrabLedgeMove(float Value)
 				}
 			}
 		}
+	}
+}
+
+void AMainCharacter::GrabLedgeRear()
+{
+	if (!bIsGrabbingLookingRear)
+	{
+		bIsGrabbingLookingRear = true;
+		Animation->bIsGrabingAndLookingRear = true;
+		// TODO: Camera restrictions
+	}
+}
+
+void AMainCharacter::GrabLedgeRearCancel()
+{
+	if(bIsGrabbingLookingRear)
+	{
+		bIsGrabbingLookingRear = false;
+		Animation->bIsGrabingAndLookingRear = false;
+		// TODO: Camera restrictions
 	}
 }
 
