@@ -630,7 +630,6 @@ void AMainCharacter::GrabLedgeDoOnce()
 
 			GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
 			bIsHanging = true;
-			bUseControllerRotationYaw = false;
 
 			FLatentActionInfo GrabLedgeMoveLatentInfo;
 			GrabLedgeMoveLatentInfo.CallbackTarget = this;
@@ -650,7 +649,9 @@ void AMainCharacter::GrabLedgeDoOnce()
 			GetCharacterMovement()->StopMovementImmediately();
 			bCanDoWallRunning = true;
 			
-			// TODO: Camera resctrictions
+			// Camera resctrictions
+			bUseControllerRotationYaw = false;
+			RestrictView(AlignToWall().Yaw - 60.0f, AlignToWall().Yaw + 60.0f, -60.0f);
 		}
 	}
 }
@@ -672,8 +673,10 @@ void AMainCharacter::LeaveLedge()
 	bCanBraceHang = false;
 	bIsGrabbingLookingSide = false;
 	bIsGrabbingLookingRear = false;
+	
+	// Camera restrictions
 	bUseControllerRotationYaw = true;
-	// TODO: Camera restrictions
+	ResetRestrictView();
 }
 
 void AMainCharacter::ClimbLedge()
@@ -688,7 +691,9 @@ void AMainCharacter::ClimbLedge()
 		Animation->Climbing();
 		Animation->bIsHanging = false;
 
-		// TODO: Camera restrictions
+		// Camera restrictions
+		bUseControllerRotationYaw = false;
+		RestrictView(AlignToWall().Yaw, AlignToWall().Yaw);
 	}
 }
 
@@ -776,7 +781,8 @@ void AMainCharacter::KneeClimbLedgeDoOnce()
 			GetCharacterMovement()->StopMovementImmediately();
 			bIsWallRunning = false;
 
-			// TODO: Camera restrictions
+			// Camera restrictions
+			RestrictView(AlignToWall().Yaw, AlignToWall().Yaw, -60.0f);
 		}
 	}
 }
@@ -790,8 +796,10 @@ void AMainCharacter::CompleteClimb()
 {
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 	bIsClimbingLedge = false;
+
+	// Camera restrictions
 	bUseControllerRotationYaw = true;
-	// TODO: Camera restrictions
+	ResetRestrictView();
 }
 
 void AMainCharacter::GrabLedgeMove()
@@ -957,7 +965,10 @@ void AMainCharacter::GrabLedgeRear()
 	{
 		bIsGrabbingLookingRear = true;
 		Animation->bIsGrabingAndLookingRear = true;
-		// TODO: Camera restrictions
+
+		// Camera restrictions
+		bUseControllerRotationYaw = false;
+		RestrictView(AlignToWall().Yaw + 120.0f, AlignToWall().Yaw - 120.0f, -60.0f);
 	}
 }
 
@@ -967,7 +978,10 @@ void AMainCharacter::GrabLedgeRearCancel()
 	{
 		bIsGrabbingLookingRear = false;
 		Animation->bIsGrabingAndLookingRear = false;
-		// TODO: Camera restrictions
+
+		// Camera restrictions
+		bUseControllerRotationYaw = false;
+		RestrictView(AlignToWall().Yaw - 60.0f, AlignToWall().Yaw + 60.0f, -60.0f);
 	}
 }
 
@@ -985,7 +999,6 @@ void AMainCharacter::JumpGrabbingSide()
 			LaunchCharacter((UKismetMathLibrary::NegateVector(GetActorRightVector()) * 500.0f) + FVector(0, 0, 600.0f), false, false);
 		}
 	}
-	// TODO: Camera restrictions
 }
 
 void AMainCharacter::JumpGrabbingRear()
@@ -993,7 +1006,6 @@ void AMainCharacter::JumpGrabbingRear()
 	LeaveLedge();
 	LaunchCharacter((WallNormal * 500) + FVector(0, 0, 300.0f), false, false);
 	PlayerController->SetControlRotation(GetActorRotation() + FRotator(0, 180.0f, 0));
-	// TODO: Camera restrictions
 }
 
 void AMainCharacter::JumpOrWallRunning()
@@ -1061,7 +1073,8 @@ void AMainCharacter::JumpOrWallRunning()
 				bIsWallRunning = true;
 				bCanDoWallRunning = false;
 
-				// TODO: Camera restrictions
+				// Camera restrictions
+				RestrictView(AlignToWall().Yaw - 60.0f, AlignToWall().Yaw + 60.0f, -60.0f);
 			}
 			else
 			{
@@ -1086,8 +1099,10 @@ void AMainCharacter::WallRunningStop()
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
 	bIsWallRunning = false;
 	bIsClimbingLedge = false;
+
+	// Camera restrictions
 	bUseControllerRotationYaw = true;
-	// TODO: Camera restrictions
+	ResetRestrictView();
 }
 
 void AMainCharacter::WallRunningStopDoOnce()
@@ -1110,6 +1125,35 @@ void AMainCharacter::WallRunningStopReset()
 FRotator AMainCharacter::AlignToWall()
 {
 	return UKismetMathLibrary::MakeRotFromXZ((WallNormal * FVector(-1, -1, 0)), GetCapsuleComponent()->GetUpVector());
+}
+
+void AMainCharacter::ResetRestrictView()
+{
+	PlayerController->PlayerCameraManager->ViewYawMin = 0.0f;
+	PlayerController->PlayerCameraManager->ViewYawMax = 359.999f;
+	PlayerController->PlayerCameraManager->ViewPitchMin = -89.999f;
+}
+
+void AMainCharacter::RestrictView(float YawMin, float YawMax)
+{
+	RestrictView(YawMin, YawMax, -89.999f);
+}
+
+void AMainCharacter::RestrictView(float YawMin, float YawMax, float PitchMin)
+{
+	float YawNewCenter;
+	YawNewCenter = (YawMin + YawMax) / 2;
+
+	//UKismetMathLibrary::RInterpTo(
+	//	GetActorRotation(), // Current rotation
+	//	FRotator(GetActorRotation().Pitch, YawNewCenter, GetActorRotation().Roll), // New rotation
+	//	4.0f, // Time
+	//	1.0f //Velocity
+	//);
+	
+	PlayerController->PlayerCameraManager->ViewYawMin = YawMin;
+	PlayerController->PlayerCameraManager->ViewYawMax = YawMax;
+	PlayerController->PlayerCameraManager->ViewPitchMin = PitchMin;
 }
 
 //////////////////////////////////////////////////////////////////////////

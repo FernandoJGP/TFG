@@ -241,6 +241,9 @@ private:
 	void WallRunningStopReset();
 
 	FRotator AlignToWall();
+	void RestrictView(float YawMin, float YawMax);
+	void RestrictView(float YawMin, float YawMax, float PitchMin);
+	void ResetRestrictView();
 
 // Interface methods
 public:
