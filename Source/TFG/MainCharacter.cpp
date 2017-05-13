@@ -140,7 +140,10 @@ void AMainCharacter::Tick(float DeltaTime)
 	}
 	else
 	{
-		// TODO
+		if (bIsWallRunning && !bIsClimbingLedge)
+		{
+			WallRunningStop(); // TODO: Check
+		}
 	}
 }
 
@@ -294,7 +297,7 @@ void AMainCharacter::OnJump()
 {
 	if (!bIsHanging)
 	{
-		ACharacter::Jump();
+		AMainCharacter::JumpOrWallRunning();
 	}
 	else
 	{
@@ -437,7 +440,7 @@ void AMainCharacter::OnClimbSurfaceDetectorEndOverlap(class UPrimitiveComponent*
 
 void AMainCharacter::DoTrace()
 {
-	if(GetCharacterMovement()->IsFalling() && !bIsHanging) // TODO
+	if((GetCharacterMovement()->IsFalling() && !bIsHanging) || bIsWallRunning)
 	{
 		// Wall tracer
 		FCollisionQueryParams RV_TraceParams_Wall = FCollisionQueryParams(FName(TEXT("WallTracer")), true, this);
@@ -484,7 +487,14 @@ void AMainCharacter::DoTrace()
 
 			if (RV_Hit_Roof.bBlockingHit)
 			{
-				// TODO
+				if (bIsWallRunning)
+				{
+					WallRunningStopDoOnce();
+				}
+				else
+				{
+					WallRunningStopReset();
+				}
 			}
 		}
 
@@ -531,19 +541,24 @@ void AMainCharacter::DoTrace()
 			//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, "Height tracer succeed");
 			LedgeHeight = RV_Hit_Height_Left.ImpactPoint; // We take the left impact point, at the moment
 
-			// Climbing checks - Good location?????????????????????????????????????????????????????????????????????????????????
-			if (true) // TODO
+			// Climbing checks
+			if (!bIsWallRunning)
 			{
-				if ((((GetMesh()->GetSocketLocation(TEXT("HipSocket"))).Z - (LedgeHeight.Z)) > -70.0f)
-					&& (((GetMesh()->GetSocketLocation(TEXT("HipSocket"))).Z - (LedgeHeight.Z)) < 0.0f))
+				if ((((GetMesh()->GetSocketLocation(TEXT("HipSocket"))).Z - (LedgeHeight.Z)) >= -70.0f)
+					&& (((GetMesh()->GetSocketLocation(TEXT("HipSocket"))).Z - (LedgeHeight.Z)) <= 0.0f))
 				{
-					GrabLedge();
+					GrabLedgeDoOnce();
 				}
 				else
 				{
-					ResetGrabLedge();
+					GrabLedgeReset();
 					KneeClimbLedge();
 				}
+			}
+			else
+			{
+				GrabLedgeReset();
+				KneeClimbLedge();
 			}
 		}
 	}
@@ -568,7 +583,7 @@ void AMainCharacter::DoTrace()
 			FCollisionShape::MakeSphere(10.0f), // Radius
 			RV_TraceParams_Foot_Left
 		);
-		GetWorld()->DebugDrawTraceTag = FName(TEXT("FootTracerLeft"));
+		//GetWorld()->DebugDrawTraceTag = FName(TEXT("FootTracerLeft"));
 
 		// Foot tracer: Right
 		FCollisionQueryParams RV_TraceParams_Foot_Right = FCollisionQueryParams(FName(TEXT("FootTracerRight")), true, this);
@@ -603,10 +618,12 @@ void AMainCharacter::DoTrace()
 	}
 }
 
-void AMainCharacter::GrabLedge()
+void AMainCharacter::GrabLedgeDoOnce()
 {
 	if (bGrabLedgeDoOnce)
 	{
+		bGrabLedgeDoOnce = false;
+
 		if (!bIsClimbingLedge)
 		{
 			Animation->bIsHanging = true;
@@ -631,15 +648,14 @@ void AMainCharacter::GrabLedge()
 				GrabLedgeMoveLatentInfo);
 
 			GetCharacterMovement()->StopMovementImmediately();
+			bCanDoWallRunning = true;
 			
-			// TODO
+			// TODO: Camera resctrictions
 		}
-
-		bGrabLedgeDoOnce = false;
 	}
 }
 
-void AMainCharacter::ResetGrabLedge()
+void AMainCharacter::GrabLedgeReset()
 {
 	bGrabLedgeDoOnce = true;
 }
@@ -657,30 +673,130 @@ void AMainCharacter::LeaveLedge()
 	bIsGrabbingLookingSide = false;
 	bIsGrabbingLookingRear = false;
 	bUseControllerRotationYaw = true;
-	// TODO
+	// TODO: Camera restrictions
 }
 
 void AMainCharacter::ClimbLedge()
 {
-	Animation->bIsHanging = false;
-	Animation->bCanBraceHang = false;
-	Animation->GrabRightInput = 0.0f;
-	Animation->GrabLookingRightInput = 0.0f;
-	Animation->bIsGrabingAndLookingRear = false;
-	bIsHanging = false;
-	bCanBraceHang = false;
-	bIsGrabbingLookingSide = false;
-	bIsGrabbingLookingRear = false;
+	if (!bIsClimbingLedge)
+	{
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+
+		bIsClimbingLedge = true;
+		bIsHanging = false;
+
+		Animation->Climbing();
+		Animation->bIsHanging = false;
+
+		// TODO: Camera restrictions
+	}
 }
 
 void AMainCharacter::KneeClimbLedge()
 {
+	bool bCanClimbKnees;
+	bool bAux;
+	float HipToLedgeHeightDistance;
 
+	bCanClimbKnees = false;
+	HipToLedgeHeightDistance = GetMesh()->GetSocketLocation(TEXT("HipSocket")).Z - LedgeHeight.Z;
+	bAux = false;
+
+	if (AMainCharacter::GetVelocity().Z > 0.0f)
+	{
+		// The character is jumping
+		if (HipToLedgeHeightDistance >= 0.0f && HipToLedgeHeightDistance <= 20.0f)
+		{
+			bCanClimbKnees = true;
+		}
+	}
+	else
+	{
+		// The character is falling
+		if (HipToLedgeHeightDistance >= 1.0f && HipToLedgeHeightDistance <= 1.0f)
+		{
+			bCanClimbKnees = true;
+		}
+	}
+
+	if (bCanClimbKnees)
+	{
+		if (bIsWallRunning)
+		{
+			bAux = (AMainCharacter::GetVelocity().Z < 300.0f);
+		}
+		else
+		{
+			bAux = true;
+		}
+
+		if (bAux)
+		{
+			KneeClimbLedgeDoOnce();
+		}
+		else
+		{
+			KneeClimbLedgeDoOnceReset();
+		}
+	}
+	else
+	{
+		KneeClimbLedgeDoOnceReset();
+	}
+}
+
+void AMainCharacter::KneeClimbLedgeDoOnce()
+{
+	if (bKneeClimbLedgeDoOnce)
+	{
+		bKneeClimbLedgeDoOnce = false;
+
+		if (!bIsClimbingLedge)
+		{
+			Animation->ClimbingKnees();
+			bIsClimbingLedge = true;
+			GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+			bUseControllerRotationYaw = false;
+
+			FLatentActionInfo KneeClimbingLatentInfo;
+			KneeClimbingLatentInfo.CallbackTarget = this;
+			UKismetSystemLibrary::MoveComponentTo(RootComponent,
+				FVector(
+					(WallNormal * FVector(CapsuleRadius, CapsuleRadius, CapsuleRadius)).X + WallImpact.X,
+					(WallNormal * FVector(CapsuleRadius, CapsuleRadius, CapsuleRadius)).Y + WallImpact.Y,
+					LedgeHeight.Z - 116.0f),
+				AlignToWall(),
+				false, // Ease Out
+				false, // Ease In
+				0.2f, // Over Time
+				false, // Force Rotation Shortest Path
+				EMoveComponentAction::Move, // Movement Type
+				KneeClimbingLatentInfo);
+
+			GetCharacterMovement()->StopMovementImmediately();
+			bIsWallRunning = false;
+
+			// TODO: Camera restrictions
+		}
+	}
+}
+
+void AMainCharacter::KneeClimbLedgeDoOnceReset()
+{
+	bKneeClimbLedgeDoOnce = true;
+}
+
+void AMainCharacter::CompleteClimb()
+{
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	bIsClimbingLedge = false;
+	bUseControllerRotationYaw = true;
+	// TODO: Camera restrictions
 }
 
 void AMainCharacter::GrabLedgeMove()
 {
-	if (GetInputAxisValue(TEXT("MoveRight")) == 0.0f) // TODO
+	if (GetInputAxisValue(TEXT("MoveRight")) == 0.0f || bIsGrabbingLookingRear)
 	{
 		GetCharacterMovement()->StopMovementImmediately();
 		Animation->GrabRightInput = 0.0f;
@@ -879,6 +995,117 @@ void AMainCharacter::JumpGrabbingRear()
 	PlayerController->SetControlRotation(GetActorRotation() + FRotator(0, 180.0f, 0));
 	// TODO: Camera restrictions
 }
+
+void AMainCharacter::JumpOrWallRunning()
+{
+	if (bIsWallRunning)
+	{
+		WallRunningRearJump();
+	}
+	else
+	{
+		if (!GetCharacterMovement()->IsFlying())
+		{
+			if (GetCharacterMovement()->IsWalking())
+			{
+				bCanDoWallRunning = true;
+			}
+
+			// TODO: Check if the player is busy
+
+			// Wall run tracer
+			FCollisionQueryParams RV_TraceParams_Wall_Run = FCollisionQueryParams(FName(TEXT("WallRunTracer")), true, this);
+			RV_TraceParams_Wall_Run.bTraceComplex = true;
+			RV_TraceParams_Wall_Run.bTraceAsyncScene = true;
+			RV_TraceParams_Wall_Run.bReturnPhysicalMaterial = false;
+
+			FHitResult RV_Hit_Wall_Run(ForceInit);
+
+			GetWorld()->SweepSingleByChannel(
+				RV_Hit_Wall_Run, // Result
+				GetActorLocation(), // Start
+				GetActorLocation() + (GetActorForwardVector() * FVector(150.0f, 150.0f, 0)), // End
+				FQuat(),
+				ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
+				FCollisionShape::MakeSphere(20.0f), // Radius
+				RV_TraceParams_Wall_Run
+			);
+			//GetWorld()->DebugDrawTraceTag = FName(TEXT("WallRunTracer"));
+
+			if (RV_Hit_Wall_Run.bBlockingHit && bCanDoWallRunning)
+			{
+				WallImpact = RV_Hit_Wall_Run.ImpactPoint;
+				WallNormal = RV_Hit_Wall_Run.ImpactNormal;
+
+				Animation->bIsWallRunnnig = true;
+				Animation->WallRunning();
+
+				GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+				bUseControllerRotationYaw = false;
+
+				FLatentActionInfo WallRunningLatentInfo;
+				WallRunningLatentInfo.CallbackTarget = this;
+				UKismetSystemLibrary::MoveComponentTo(RootComponent,
+					FVector(
+						WallImpact.X - (GetActorForwardVector().X * 40.0f),
+						WallImpact.Y - (GetActorForwardVector().Y * 40.0f),
+						WallImpact.Z + 100.0f),
+					AlignToWall(),
+					false, // Ease Out
+					false, // Ease In
+					0.2f, // Over Time
+					true, // Force Rotation Shortest Path
+					EMoveComponentAction::Move, // Movement Type
+					WallRunningLatentInfo);
+
+				bIsWallRunning = true;
+				bCanDoWallRunning = false;
+
+				// TODO: Camera restrictions
+			}
+			else
+			{
+				ACharacter::Jump();
+			}
+		}
+	}
+}
+
+void AMainCharacter::WallRunningRearJump()
+{
+
+}
+
+void AMainCharacter::WallRunningStop()
+{
+	bWallRunningStopDoOnce = false;
+	Animation->bIsWallRunnnig = false;
+	Animation->WallRunning();
+
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
+	bIsWallRunning = false;
+	bIsClimbingLedge = false;
+	bUseControllerRotationYaw = true;
+	// TODO: Camera restrictions
+}
+
+void AMainCharacter::WallRunningStopDoOnce()
+{
+	if (bWallRunningStopDoOnce)
+	{
+		bWallRunningStopDoOnce = false;
+		WallRunningStop();
+	}
+}
+
+void AMainCharacter::WallRunningStopReset()
+{
+	bWallRunningStopDoOnce = true;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Util
 
 FRotator AMainCharacter::AlignToWall()
 {

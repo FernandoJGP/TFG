@@ -133,8 +133,16 @@ public:
 	bool bIsGrabbingLookingRear = false;
 
 	// Stores if the player is climbing
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Climb")
 	bool bIsClimbingLedge = false;
+
+	// Stores if the player is doing wall running
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Climb")
+	bool bIsWallRunning = false;
+
+	// Stores if the player can do wall running
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+	bool bCanDoWallRunning = true;
 
 	// Stores the ledge height point
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
@@ -148,9 +156,17 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
 	FVector WallNormal;
 
-	// Stores the wall impact normal
+	// Grab ledge do once aux variable
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
 	bool bGrabLedgeDoOnce = true;
+
+	// Knee climb do once aux variable
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+	bool bKneeClimbLedgeDoOnce = true;
+
+	// Wall running stop do once aux variable
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
+	bool bWallRunningStopDoOnce = true;
 
 // Functions
 private:
@@ -203,16 +219,26 @@ private:
 	void OnClimbSurfaceDetectorEndOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	void DoTrace();
-	void GrabLedge();
-	void ResetGrabLedge();
+	void GrabLedgeDoOnce();
+	void GrabLedgeReset();
 	void LeaveLedge();
 	void ClimbLedge();
 	void KneeClimbLedge();
+	void KneeClimbLedgeDoOnce();
+	void KneeClimbLedgeDoOnceReset();
+	UFUNCTION(BlueprintCallable)
+	void CompleteClimb();
 	void GrabLedgeMove();
 	void GrabLedgeRear();
 	void GrabLedgeRearCancel();
 	void JumpGrabbingSide();
 	void JumpGrabbingRear();
+	void JumpOrWallRunning();
+	void WallRunningRearJump();
+	UFUNCTION(BlueprintCallable)
+	void WallRunningStop();
+	void WallRunningStopDoOnce();
+	void WallRunningStopReset();
 
 	FRotator AlignToWall();
 
