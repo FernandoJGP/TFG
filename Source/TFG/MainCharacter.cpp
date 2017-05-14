@@ -20,6 +20,14 @@
 #define SprintSpeed 800.0f
 #define WalkSpeed 250.0f
 
+#define DefaultViewYawMin 0.0f;
+#define DefaultViewYawMax 359.999f;
+#define DefaultViewPitchMin -80.0f;
+#define DefaultViewPitchMax 70.0f
+
+#define DefaultFPCameraProbeSize 16.0f;
+#define HangingFPCameraProbeSize 12.0f;
+
 //////////////////////////////////////////////////////////////////////////
 // AMainCharacter
 
@@ -44,8 +52,10 @@ AMainCharacter::AMainCharacter()
 	// First person camera arm
 	FirstPersonCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("FirstPersonCameraArm"));
 	GetFirstPersonCameraArm()->SetupAttachment(GetMesh(), TEXT("HeadSocket"));
-	GetFirstPersonCameraArm()->RelativeRotation = FRotator(0.0f, 90.0f, 0.0f);
-	GetFirstPersonCameraArm()->TargetArmLength = -20.0f;
+	GetFirstPersonCameraArm()->RelativeLocation = FVector(5.0f, 7.5f, 0.0f);
+	GetFirstPersonCameraArm()->RelativeRotation = FRotator(0.0f, 90.0f, -90.0f);
+	GetFirstPersonCameraArm()->TargetArmLength = -15.0f;
+	GetFirstPersonCameraArm()->ProbeSize = DefaultFPCameraProbeSize;
 
 	// First person camera
 	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
@@ -153,6 +163,10 @@ void AMainCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	PlayerController = Cast<APlayerController>(GetController());
+
+	// Camera Setups
+	PlayerController->PlayerCameraManager->ViewPitchMin = DefaultViewPitchMin;
+	PlayerController->PlayerCameraManager->ViewPitchMax = DefaultViewPitchMax;
 
 	// HUD initialization
 	//static ConstructorHelpers::FClassFinder<UUserWidget> WidgetFinder(TEXT("/Game/Blueprints/HUD/HUDWidget"));
@@ -339,7 +353,7 @@ void AMainCharacter::OnCrouchReleased()
 void AMainCharacter::OnTimeDilationToggle()
 {
 	// Checks if the player can use powers
-	if (bIsPowered)
+	if (bIsPowered && !bIsHanging && !bIsClimbingLedge)
 	{
 		// Toggle the time dilation (bullet time)
 		if (bTimeDilationIsActive)
@@ -385,7 +399,7 @@ void AMainCharacter::OnBlinkTimerEnd()
 
 void AMainCharacter::CheckCanBlink()
 {
-	if (bIsPowered && !bBlinkIsActive)
+	if (bIsPowered && !bBlinkIsActive && !bIsHanging && !bIsClimbingLedge)
 	{
 		// Trace a line from the camera location in the direction where the player was looking
 		FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("BlinkTracer")), true, this);
@@ -626,6 +640,8 @@ void AMainCharacter::GrabLedgeDoOnce()
 
 		if (!bIsClimbingLedge)
 		{
+			GetFirstPersonCameraArm()->ProbeSize = HangingFPCameraProbeSize;
+
 			Animation->bIsHanging = true;
 
 			GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
@@ -677,6 +693,7 @@ void AMainCharacter::LeaveLedge()
 	// Camera restrictions
 	bUseControllerRotationYaw = true;
 	ResetRestrictView();
+	GetFirstPersonCameraArm()->ProbeSize = DefaultFPCameraProbeSize;
 }
 
 void AMainCharacter::ClimbLedge()
@@ -700,12 +717,12 @@ void AMainCharacter::ClimbLedge()
 void AMainCharacter::KneeClimbLedge()
 {
 	bool bCanClimbKnees;
-	bool bAux;
+	bool bCheckIfDoOrReset;
 	float HipToLedgeHeightDistance;
 
 	bCanClimbKnees = false;
+	bCheckIfDoOrReset = false;
 	HipToLedgeHeightDistance = GetMesh()->GetSocketLocation(TEXT("HipSocket")).Z - LedgeHeight.Z;
-	bAux = false;
 
 	if (AMainCharacter::GetVelocity().Z > 0.0f)
 	{
@@ -728,14 +745,14 @@ void AMainCharacter::KneeClimbLedge()
 	{
 		if (bIsWallRunning)
 		{
-			bAux = (AMainCharacter::GetVelocity().Z < 300.0f);
+			bCheckIfDoOrReset = (AMainCharacter::GetVelocity().Z < 300.0f);
 		}
 		else
 		{
-			bAux = true;
+			bCheckIfDoOrReset = true;
 		}
 
-		if (bAux)
+		if (bCheckIfDoOrReset)
 		{
 			KneeClimbLedgeDoOnce();
 		}
@@ -800,6 +817,7 @@ void AMainCharacter::CompleteClimb()
 	// Camera restrictions
 	bUseControllerRotationYaw = true;
 	ResetRestrictView();
+	GetFirstPersonCameraArm()->ProbeSize = DefaultFPCameraProbeSize;
 }
 
 void AMainCharacter::GrabLedgeMove()
@@ -1129,14 +1147,16 @@ FRotator AMainCharacter::AlignToWall()
 
 void AMainCharacter::ResetRestrictView()
 {
-	PlayerController->PlayerCameraManager->ViewYawMin = 0.0f;
-	PlayerController->PlayerCameraManager->ViewYawMax = 359.999f;
-	PlayerController->PlayerCameraManager->ViewPitchMin = -89.999f;
+	PlayerController->PlayerCameraManager->ViewYawMin = DefaultViewYawMin;
+	PlayerController->PlayerCameraManager->ViewYawMax = DefaultViewYawMax;
+	PlayerController->PlayerCameraManager->ViewPitchMin = DefaultViewPitchMin;
 }
 
 void AMainCharacter::RestrictView(float YawMin, float YawMax)
 {
-	RestrictView(YawMin, YawMax, -89.999f);
+	float Aux = DefaultViewPitchMin;
+
+	RestrictView(YawMin, YawMax, Aux);
 }
 
 void AMainCharacter::RestrictView(float YawMin, float YawMax, float PitchMin)
