@@ -1104,7 +1104,13 @@ void AMainCharacter::JumpOrWallRunning()
 
 void AMainCharacter::WallRunningRearJump()
 {
-
+	if (bIsWallRunning && !bIsClimbingLedge)
+	{
+		WallRunningStop();
+		LaunchCharacter((WallNormal * 750.0f) + FVector(0, 0, 500.0f), false, false);
+		PlayerController->SetControlRotation(GetActorRotation() + FRotator(0, 180.0f, 0));
+		bCanDoWallRunning = true;
+	}
 }
 
 void AMainCharacter::WallRunningStop()
