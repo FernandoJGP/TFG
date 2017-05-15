@@ -332,7 +332,11 @@ void AMainCharacter::OnJump()
 			}
 			else
 			{
-				AMainCharacter::ClimbLedge();
+				// Check if there is space to place the character after climb the ledge
+				if(CanClimbLedge())
+				{
+					AMainCharacter::ClimbLedge();
+				}
 			}
 		}
 	}
@@ -826,6 +830,37 @@ void AMainCharacter::CompleteClimb()
 	bUseControllerRotationYaw = true;
 	ResetRestrictView();
 	GetFirstPersonCameraArm()->ProbeSize = DefaultFPCameraProbeSize;
+}
+
+bool AMainCharacter::CanClimbLedge()
+{
+	// Can climb tracer
+	FCollisionQueryParams RV_TraceParams_Can_Climb = FCollisionQueryParams(FName(TEXT("CanClimbTracer")), true, this);
+	RV_TraceParams_Can_Climb.bTraceComplex = true;
+	RV_TraceParams_Can_Climb.bTraceAsyncScene = true;
+	RV_TraceParams_Can_Climb.bReturnPhysicalMaterial = false;
+
+	FHitResult RV_Hit_Can_Climb(ForceInit);
+
+	GetWorld()->SweepSingleByChannel(
+		RV_Hit_Can_Climb, // Result
+		GetActorLocation() + (GetActorForwardVector() * 80.0f) + FVector(0, 0, 160.0f), // Start
+		GetActorLocation() + (GetActorForwardVector() * 80.0f) + FVector(0, 0, 160.0f + (CapsuleHalfHeight * 2)), // End
+		FQuat(),
+		ECollisionChannel::ECC_Visibility, // Collision channel
+		FCollisionShape::MakeSphere(CapsuleRadius), // Radius
+		RV_TraceParams_Can_Climb
+	);
+	//GetWorld()->DebugDrawTraceTag = FName(TEXT("CanClimbTracer"));
+
+	if (RV_Hit_Can_Climb.bBlockingHit)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
 }
 
 void AMainCharacter::GrabLedgeMove()

@@ -231,6 +231,7 @@ private:
 	void KneeClimbLedge();
 	void KneeClimbLedgeDoOnce();
 	void KneeClimbLedgeDoOnceReset();
+	bool CanClimbLedge();
 	UFUNCTION(BlueprintCallable)
 	void CompleteClimb();
 	void GrabLedgeMove();
