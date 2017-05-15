@@ -111,6 +111,12 @@ AMainCharacter::AMainCharacter()
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->GravityScale = 1.5f;
 	GetCharacterMovement()->AirControl = 0.7f;
+
+	// Various
+	static ConstructorHelpers::FClassFinder<UCameraShake> BlinkCameraShakeClassFinder(TEXT("Class'/Game/Blueprints/CameraShakes/BlinkCameraShake.BlinkCameraShake_C'"));
+	BlinkCameraShake = BlinkCameraShakeClassFinder.Class;
+	static ConstructorHelpers::FClassFinder<UUserWidget> HUDWidgetClassFinder(TEXT("Class'/Game/Blueprints/HUD/HUDWidget.HUDWidget_C'"));
+	HUDWidget = HUDWidgetClassFinder.Class;
 }
 
 // Called every frame
@@ -169,7 +175,6 @@ void AMainCharacter::BeginPlay()
 	PlayerController->PlayerCameraManager->ViewPitchMax = DefaultViewPitchMax;
 
 	// HUD initialization
-	//static ConstructorHelpers::FClassFinder<UUserWidget> WidgetFinder(TEXT("/Game/Blueprints/HUD/HUDWidget"));
 	if (HUDWidget && PlayerController)
 	{
 		UUserWidget* UserWidget = UWidgetBlueprintLibrary::Create(GetWorld(), HUDWidget, PlayerController);
@@ -386,6 +391,9 @@ void AMainCharacter::OnBlink()
 		bBlinkIsActive = true;
 		ACharacter::Jump();
 		FTimerHandle BlinkHandle;
+		
+		PlayerController->ClientPlayCameraShake(BlinkCameraShake, 1.0f);
+
 		GetWorldTimerManager().SetTimer(BlinkHandle, this, &AMainCharacter::OnBlinkTimerEnd, 0.25f, false);
 	}
 }

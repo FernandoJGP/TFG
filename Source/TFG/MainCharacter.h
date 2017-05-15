@@ -108,10 +108,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Blink")
 	float AdrenalinePerBlink = 250.0f;
 
-	// User widget
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HUD")
-	TSubclassOf<class UUserWidget> HUDWidget;
-
 	// Stores if the player can trace
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
 	bool bCanTrace = false;
@@ -167,6 +163,15 @@ public:
 	// Wall running stop do once aux variable
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
 	bool bWallRunningStopDoOnce = true;
+
+// Various
+	// User widget
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HUD")
+	TSubclassOf<class UUserWidget> HUDWidget;
+
+	// Blink camera shake
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "CameraShake")
+	TSubclassOf<class UCameraShake> BlinkCameraShake;
 
 // Functions
 private:
