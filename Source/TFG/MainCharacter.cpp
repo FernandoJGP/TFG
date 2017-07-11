@@ -39,9 +39,9 @@ AMainCharacter::AMainCharacter()
 	
 	// Initialize mesh
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SkeletalMeshObjectFinder(TEXT("/Game/Hero/Mannequin/Mesh/Hero_Mannequin"));
-	static ConstructorHelpers::FObjectFinder<UAnimBlueprint> AnimationBlueprintObjectFinder(TEXT("/Game/Hero/Animations/HeroAnimationBlueprint"));
+	static ConstructorHelpers::FObjectFinder<UClass> AnimationBlueprintObjectFinder(TEXT("/Game/Hero/Animations/HeroAnimationBlueprint.HeroAnimationBlueprint_C"));
 	GetMesh()->SkeletalMesh = SkeletalMeshObjectFinder.Object;
-	GetMesh()->AnimClass = AnimationBlueprintObjectFinder.Object->GeneratedClass;
+	GetMesh()->SetAnimInstanceClass(AnimationBlueprintObjectFinder.Object);
 	GetMesh()->RelativeLocation = FVector(0.0f, 0.0f, -CapsuleHalfHeight);
 	GetMesh()->RelativeRotation = FRotator(0.0f, -90.0f, 0.0f);
 	GetMesh()->bOnlyOwnerSee = false;
@@ -117,6 +117,8 @@ AMainCharacter::AMainCharacter()
 	BlinkCameraShake = BlinkCameraShakeClassFinder.Class;
 	static ConstructorHelpers::FClassFinder<UUserWidget> HUDWidgetClassFinder(TEXT("Class'/Game/Blueprints/HUD/HUDWidget.HUDWidget_C'"));
 	HUDWidget = HUDWidgetClassFinder.Class;
+	static ConstructorHelpers::FClassFinder<UUserWidget> PauseWidgetClassFinder(TEXT("Class'/Game/Blueprints/MainMenu/MainMenuWidget.MainMenuWidget_C'"));
+	PauseWidget = PauseWidgetClassFinder.Class;
 }
 
 // Called every frame
@@ -177,8 +179,15 @@ void AMainCharacter::BeginPlay()
 	// HUD initialization
 	if (HUDWidget && PlayerController)
 	{
-		UUserWidget* UserWidget = UWidgetBlueprintLibrary::Create(GetWorld(), HUDWidget, PlayerController);
-		UserWidget->AddToViewport();
+		HUDWidgetHolder= UWidgetBlueprintLibrary::Create(GetWorld(), HUDWidget, PlayerController);
+		HUDWidgetHolder->AddToViewport();
+	}
+
+	if (PauseWidget && PlayerController)
+	{
+		PauseWidgetHolder = UWidgetBlueprintLibrary::Create(GetWorld(), PauseWidget, PlayerController);
+		PauseWidgetHolder->AddToViewport();
+		PauseWidgetHolder->SetVisibility(ESlateVisibility::Hidden);
 	}
 
 	// Animation access util
@@ -228,6 +237,9 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	// Special Power: Blink
 	PlayerInputComponent->BindAction("Blink", IE_Pressed, this, &AMainCharacter::OnBlink);
+
+	// Pause
+	PlayerInputComponent->BindAction("Pause", IE_Pressed, this, &AMainCharacter::OnPause).bExecuteWhenPaused = true;
 
 	// Util: Camera toggle
 	PlayerInputComponent->BindAction("CameraToggle", IE_Pressed, this, &AMainCharacter::OnCameraToggle);
@@ -291,15 +303,22 @@ void AMainCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
-void AMainCharacter::RotationTrick(float Rate)
+void AMainCharacter::RotationTrick(float Value)
 {
-	Animation->RotationInput = Rate;
+	Animation->RotationInput = Value;
 }
 
 void AMainCharacter::OnAction()
 {
 	// TODO
-	UGameplayStatics::SetGamePaused(GetWorld(), true);
+	if(UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		UGameplayStatics::SetGamePaused(GetWorld(), false);
+	}
+	else
+	{
+		UGameplayStatics::SetGamePaused(GetWorld(), true);
+	}
 }
 
 void AMainCharacter::OnSprintPressed()
@@ -443,6 +462,30 @@ void AMainCharacter::CheckCanBlink()
 	else
 	{
 		bCanBlink = false;
+	}
+}
+
+void AMainCharacter::OnPause()
+{
+	if (UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		UGameplayStatics::SetGamePaused(GetWorld(), false);
+
+		PauseWidgetHolder->SetVisibility(ESlateVisibility::Hidden);
+		HUDWidgetHolder->SetVisibility(ESlateVisibility::Visible);
+
+		UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
+		PlayerController->bShowMouseCursor = false;
+	}
+	else
+	{
+		UGameplayStatics::SetGamePaused(GetWorld(), true);
+
+		HUDWidgetHolder->SetVisibility(ESlateVisibility::Hidden);
+		PauseWidgetHolder->SetVisibility(ESlateVisibility::Visible);
+		
+		UWidgetBlueprintLibrary::SetInputMode_GameAndUI(PlayerController, PauseWidgetHolder, true);
+		PlayerController->bShowMouseCursor = true;
 	}
 }
 
@@ -747,7 +790,7 @@ void AMainCharacter::KneeClimbLedge()
 	else
 	{
 		// The character is falling
-		if (HipToLedgeHeightDistance >= 1.0f && HipToLedgeHeightDistance <= 1.0f)
+		if (HipToLedgeHeightDistance == 1.0f)
 		{
 			bCanClimbKnees = true;
 		}

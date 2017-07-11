@@ -165,9 +165,15 @@ public:
 	bool bWallRunningStopDoOnce = true;
 
 // Various
-	// User widget
+	// HUD widget
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HUD")
 	TSubclassOf<class UUserWidget> HUDWidget;
+	UUserWidget* HUDWidgetHolder;
+
+	// Pause widget
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HUD")
+	TSubclassOf<class UUserWidget> PauseWidget;
+	UUserWidget* PauseWidgetHolder;
 
 	// Blink camera shake
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "CameraShake")
@@ -213,6 +219,10 @@ private:
 	void OnBlink();
 	void CheckCanBlink();
 	void OnBlinkTimerEnd();
+
+	// Pause
+	UFUNCTION(BlueprintCallable)
+	void OnPause();
 
 	// Camera toggle
 	void OnCameraToggle();
