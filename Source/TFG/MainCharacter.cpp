@@ -12,6 +12,9 @@
 #include "Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h"
 #include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
 
+#include "MainSaveGame.h"
+#include "Kismet/GameplayStatics.h"
+
 #include "HeroAnimationInstance.h"
 
 #define CapsuleRadius 42.0f
@@ -201,6 +204,25 @@ void AMainCharacter::BeginPlay()
 
 	// Animation access util
 	Animation = Cast<UHeroAnimationInstance>(GetMesh()->GetAnimInstance());
+
+	// Save load
+	if(UGameplayStatics::DoesSaveGameExist(TEXT("Save"), 0))
+	{
+		UMainSaveGame* LoadGameInstance = Cast<UMainSaveGame>(UGameplayStatics::CreateSaveGameObject(UMainSaveGame::StaticClass()));
+		LoadGameInstance = Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("Save"), 0));
+		bool RespawnFromStart = LoadGameInstance->bFromStart;
+		FName RespawnLevel = LoadGameInstance->Level;
+		FName CurrentLevel = *UGameplayStatics::GetCurrentLevelName(GetWorld(), true);
+		//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Blue, FString::Printf(TEXT("SameLevel: %s"), RespawnLevel == CurrentLevel ? "T" : "F"));
+
+		if (!RespawnFromStart && (RespawnLevel == CurrentLevel))
+		{
+			FVector RespawnLocation = LoadGameInstance->Location;
+			FRotator RespawnRotation = LoadGameInstance->Rotation;
+			this->SetActorLocation(RespawnLocation);
+			Controller->SetControlRotation(RespawnRotation);
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -424,7 +446,7 @@ void AMainCharacter::OnBlink()
 		ACharacter::Jump();
 		FTimerHandle BlinkHandle;
 		
-		PlayerController->ClientPlayCameraShake(BlinkCameraShake, 1.0f);
+		PlayerController->ClientPlayCameraShake(BlinkCameraShake, 1.5f);
 
 		GetWorldTimerManager().SetTimer(BlinkHandle, this, &AMainCharacter::OnBlinkTimerEnd, 0.25f, false);
 	}
