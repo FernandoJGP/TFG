@@ -28,6 +28,14 @@ class TFG_API AMainCharacter : public ACharacter, public IHUDInterface
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* ThirdPersonCameraArm;
 
+	// Dead camera
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	class UCameraComponent* DeathCameraComponent;
+
+	// Dead camera spring arm
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	class USpringArmComponent* DeathCameraArm;
+
 	// Climb surface detector
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ClimbDetector", meta = (AllowPrivateAccess = "true"))
 	USphereComponent* ClimbSurfaceDetector;
@@ -55,6 +63,10 @@ public:
 	// Base look up/down rate, in deg/sec
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	float BaseLookUpRate;
+
+	// Stores if the player is dead or not
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dead")
+	bool bIsDead = false;
 
 	// Stores if the player has powers currently
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Power")
@@ -179,8 +191,16 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "CameraShake")
 	TSubclassOf<class UCameraShake> BlinkCameraShake;
 
+	// Death sound
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundWave* DeathAudioWave;
+
 // Functions
 private:
+	// Overlap
+	UFUNCTION()
+	void BeginOverlap(AActor* OverlappedActor, AActor* OtherActor);
+
 	// Handles moving forward/backward
 	void MoveForward(float Val);
 
@@ -227,6 +247,13 @@ private:
 	// Camera toggle
 	void OnCameraToggle();
 
+	UFUNCTION(BlueprintCallable)
+	// Dead
+	void OnDead();
+
+	// Dead end
+	void OnDeadEnd();
+
 	// Climb surface detector
 	UFUNCTION()
 	void OnClimbSurfaceDetectorBeginOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
@@ -264,8 +291,8 @@ private:
 // Interface methods
 public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
-	void HUDInterface(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface);
-	virtual void HUDInterface_Implementation(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface);
+	void HUDInterface(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface, bool &bIsDead_Interface);
+	virtual void HUDInterface_Implementation(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface, bool &bIsDead_Interface);
 
 //Util methods
 private:
@@ -283,5 +310,7 @@ public:
 	FORCEINLINE class USpringArmComponent* GetFirstPersonCameraArm() const { return FirstPersonCameraArm; }
 	FORCEINLINE class UCameraComponent* GetThirdPersonCameraComponent() const { return ThirdPersonCameraComponent; }
 	FORCEINLINE class USpringArmComponent* GetThirdPersonCameraArm() const { return ThirdPersonCameraArm; }
+	FORCEINLINE class UCameraComponent* GetDeathCameraComponent() const { return DeathCameraComponent; }
+	FORCEINLINE class USpringArmComponent* GetDeathCameraArm() const { return DeathCameraArm; }
 	FORCEINLINE class USphereComponent* GetClimbSurfaceDetector() const { return ClimbSurfaceDetector; }
 };

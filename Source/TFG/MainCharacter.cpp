@@ -28,7 +28,7 @@
 #define DefaultViewPitchMin -80.0f;
 #define DefaultViewPitchMax 70.0f
 
-#define DefaultFPCameraProbeSize 18.0f;
+#define DefaultFPCameraProbeSize 20.0f;
 #define HangingFPCameraProbeSize 12.0f;
 
 //////////////////////////////////////////////////////////////////////////
@@ -51,6 +51,7 @@ AMainCharacter::AMainCharacter()
 	GetMesh()->bOwnerNoSee = false;
 	GetMesh()->bCastDynamicShadow = true;
 	GetMesh()->bReceivesDecals = false;
+	GetMesh()->SetCollisionProfileName(FName("CharacterMesh"));
 
 	// First person camera arm
 	FirstPersonCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("FirstPersonCameraArm"));
@@ -74,6 +75,7 @@ AMainCharacter::AMainCharacter()
 	GetThirdPersonCameraArm()->RelativeRotation = FRotator(0.0f, 90.0f, -90.0f);
 	GetThirdPersonCameraArm()->TargetArmLength = 200.0f;
 	GetThirdPersonCameraArm()->bDoCollisionTest = true;
+	GetThirdPersonCameraArm()->ProbeSize = 25.0f;
 	GetThirdPersonCameraArm()->bUsePawnControlRotation = true;
 
 	// Third person camera
@@ -82,6 +84,21 @@ AMainCharacter::AMainCharacter()
 	//GetThirdPersonCameraComponent()->bUsePawnControlRotation = true;
 	GetThirdPersonCameraComponent()->FieldOfView = 95.0f;
 	GetThirdPersonCameraComponent()->bAutoActivate = false;
+
+	// Dead camera arm
+	DeathCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("DeathCameraArm"));
+	GetDeathCameraArm()->SetupAttachment(GetCapsuleComponent());
+	GetDeathCameraArm()->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
+	GetDeathCameraArm()->TargetArmLength = 150.0f;
+	GetDeathCameraArm()->bDoCollisionTest = true;
+	GetDeathCameraArm()->ProbeSize = DefaultFPCameraProbeSize;
+
+	// Dead camera
+	DeathCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("DeathCamera"));
+	GetDeathCameraComponent()->SetupAttachment(DeathCameraArm);
+	GetDeathCameraComponent()->bUsePawnControlRotation = false;
+	GetDeathCameraComponent()->FieldOfView = 110.0f;
+	GetDeathCameraComponent()->bAutoActivate = false;
 
 	// Climb detector
 	ClimbSurfaceDetector = CreateDefaultSubobject<USphereComponent>(TEXT("ClimbSurfaceDetector"));
@@ -116,6 +133,16 @@ AMainCharacter::AMainCharacter()
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->GravityScale = 1.5f;
 	GetCharacterMovement()->AirControl = 0.7f;
+
+	// Capsule overlap
+	OnActorBeginOverlap.AddDynamic(this, &AMainCharacter::BeginOverlap);
+
+	// Death sound
+	static ConstructorHelpers::FObjectFinder<USoundWave> DeathAudioWaveObjectFinder(*FString("Blueprint'/Game/SFX/Death/Death1.Death1'"));
+	DeathAudioWave = DeathAudioWaveObjectFinder.Object;
+	//int RandomNumber = rand() % 4 + 1; // Random number between 1 and 4
+	//static ConstructorHelpers::FObjectFinder<USoundWave> RandomDeathAudioWaveObjectFinder(*FString("Blueprint'/Game/SFX/Death/Death" + FString::FromInt(RandomNumber) + ".Death" + FString::FromInt(RandomNumber) + "'"));
+	//RandomDeathAudioWave = RandomDeathAudioWaveObjectFinder.Object;
 
 	// Various
 	static ConstructorHelpers::FClassFinder<UCameraShake> BlinkCameraShakeClassFinder(TEXT("Class'/Game/Blueprints/CameraShakes/BlinkCameraShake.BlinkCameraShake_C'"));
@@ -222,6 +249,23 @@ void AMainCharacter::BeginPlay()
 			this->SetActorLocation(RespawnLocation);
 			Controller->SetControlRotation(RespawnRotation);
 		}
+	}
+}
+
+void AMainCharacter::BeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
+{
+	//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, "Impact detected");
+
+	// Dead management
+	if (OtherActor->ActorHasTag(FName("deadly")))
+	{
+		OnDead();
+	}
+
+	// TODO: Collectible management
+	if (OtherActor->ActorHasTag(FName("collectible")))
+	{
+
 	}
 }
 
@@ -444,16 +488,16 @@ void AMainCharacter::OnBlink()
 	if (bCanBlink && CurrentAdrenaline >= AdrenalinePerBlink) {
 		bBlinkIsActive = true;
 		ACharacter::Jump();
-		FTimerHandle BlinkHandle;
-		
-		PlayerController->ClientPlayCameraShake(BlinkCameraShake, 1.5f);
 
+		// Timer handle
+		FTimerHandle BlinkHandle;
 		GetWorldTimerManager().SetTimer(BlinkHandle, this, &AMainCharacter::OnBlinkTimerEnd, 0.25f, false);
 	}
 }
 
 void AMainCharacter::OnBlinkTimerEnd()
 {
+	PlayerController->ClientPlayCameraShake(BlinkCameraShake, 1.5f);
 	this->SetActorLocationAndRotation(BlinkLocation + FVector(0, 0, 100), GetCapsuleComponent()->GetComponentRotation());
 	CurrentAdrenaline = FMath::Max(CurrentAdrenaline - AdrenalinePerBlink, 0.0f);
 	bBlinkIsActive = false;
@@ -516,15 +560,18 @@ void AMainCharacter::OnPause()
 		HUDWidgetHolder->SetVisibility(ESlateVisibility::Hidden);
 		PauseWidgetHolder->SetVisibility(ESlateVisibility::Visible);
 		
-		UWidgetBlueprintLibrary::SetInputMode_GameAndUI(PlayerController, PauseWidgetHolder, true);
+		UWidgetBlueprintLibrary::SetInputMode_GameAndUI(PlayerController, PauseWidgetHolder, true); // Change bool to "EMouseLockMode::LockAlways"
 		PlayerController->bShowMouseCursor = true;
 	}
 }
 
 void AMainCharacter::OnCameraToggle()
 {
-	GetFirstPersonCameraComponent()->ToggleActive();
-	GetThirdPersonCameraComponent()->ToggleActive();
+	if(!bIsDead)
+	{
+		GetFirstPersonCameraComponent()->ToggleActive();
+		GetThirdPersonCameraComponent()->ToggleActive();
+	}
 }
 
 void AMainCharacter::OnClimbSurfaceDetectorBeginOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
@@ -1234,6 +1281,51 @@ void AMainCharacter::WallRunningStopReset()
 	bWallRunningStopDoOnce = true;
 }
 
+void AMainCharacter::OnDead()
+{
+	bIsDead = true;
+	GetMesh()->SetCollisionProfileName(FName("Ragdoll"));
+	GetMesh()->SetSimulatePhysics(true);
+	this->DisableInput(PlayerController);
+
+	// Camera management
+	GetFirstPersonCameraComponent()->SetActive(false);
+	GetThirdPersonCameraComponent()->SetActive(false);
+	GetDeathCameraComponent()->SetActive(true);
+	PlayerController->ClientSetCameraFade(true, FColor::Red, FVector2D(0.75, 0.0), 2.5f);
+
+	// Sound
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), DeathAudioWave, GetActorLocation());
+
+	// Timer Handle
+	FTimerHandle DeadHandle;
+	GetWorldTimerManager().SetTimer(DeadHandle, this, &AMainCharacter::OnDeadEnd, 5.0f, false);
+}
+
+void AMainCharacter::OnDeadEnd()
+{
+	FName RespawnLevel = FName("Tutorial"); // Default (first) map
+	
+	// Save load
+	if (UGameplayStatics::DoesSaveGameExist(TEXT("Save"), 0))
+	{
+		UMainSaveGame* LoadGameInstance = Cast<UMainSaveGame>(UGameplayStatics::CreateSaveGameObject(UMainSaveGame::StaticClass()));
+		LoadGameInstance = Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("Save"), 0));
+		RespawnLevel = LoadGameInstance->Level;
+		UGameplayStatics::OpenLevel(GetWorld(), RespawnLevel);
+	}
+
+	UGameplayStatics::OpenLevel(GetWorld(), RespawnLevel);
+	PlayerController->ClientSetCameraFade(true, FColor::Black, FVector2D(1.0, 0.0), 100.0f);
+	GetMesh()->SetSimulatePhysics(false);
+	bIsDead = false;
+	GetFirstPersonCameraComponent()->SetActive(true);
+	GetThirdPersonCameraComponent()->SetActive(false);
+	GetDeathCameraComponent()->SetActive(false);
+	this->EnableInput(PlayerController);
+	GetMesh()->SetCollisionProfileName(FName("CharacterMesh"));
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Util
 
@@ -1276,9 +1368,10 @@ void AMainCharacter::RestrictView(float YawMin, float YawMax, float PitchMin)
 //////////////////////////////////////////////////////////////////////////
 // Interface
 
-void AMainCharacter::HUDInterface_Implementation(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface)
+void AMainCharacter::HUDInterface_Implementation(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface, bool &bIsDead_Interface)
 {
 	bCanBlink_Interface = bCanBlink;
 	CurrentAdrenaline_Interface = CurrentAdrenaline;
 	MaximumAdrenaline_Interface = MaximumAdrenaline;
+	bIsDead_Interface = bIsDead;
 }
