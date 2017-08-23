@@ -71,5 +71,14 @@ DerivedDataCache/*
 # Build data
 *_BuiltData.*
 
-# Hero skeleton
-Content/Hero/*
+# Purchased assets
+Content/Hero/Mannequin/*
+
+Content/Blueprints/Enemies/SentryGuns/FX/*
+Content/Blueprints/Enemies/SentryGuns/Materials/*
+Content/Blueprints/Enemies/SentryGuns/Meshes/*
+
+Content/Blueprints/Enemies/Watcher/Materials/*
+Content/Blueprints/Enemies/Watcher/Meshes/*
+
+Content/Particles/*
