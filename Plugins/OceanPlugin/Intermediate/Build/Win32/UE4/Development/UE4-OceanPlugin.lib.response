@@ -1,8 +1,0 @@
-/NOLOGO
-/errorReport:prompt
-/MACHINE:x86
-/SUBSYSTEM:WINDOWS
-"D:\Unreal Projects\TFG\Plugins\OceanPlugin\Intermediate\Build\Win32\UE4\Development\OceanPlugin\PCH.OceanPlugin.h.obj"
-"D:\Unreal Projects\TFG\Plugins\OceanPlugin\Intermediate\Build\Win32\UE4\Development\OceanPlugin\Module.OceanPlugin.cpp.obj"
-"D:\Unreal Projects\TFG\Plugins\OceanPlugin\Intermediate\Build\Win32\UE4\Development\OceanPlugin\OceanPlugin.generated.cpp.obj"
-/OUT:"D:\Unreal Projects\TFG\Plugins\OceanPlugin\Binaries\Win32\UE4-OceanPlugin.lib"
