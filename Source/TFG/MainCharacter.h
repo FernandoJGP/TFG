@@ -24,9 +24,13 @@ class TFG_API AMainCharacter : public ACharacter, public IHUDInterface
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* ThirdPersonCameraComponent;
 
-	// Third person camera spring arm
+	// Third person forward-backward camera spring arm
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
-	class USpringArmComponent* ThirdPersonCameraArm;
+	class USpringArmComponent* ThirdPersonForwardBackwardCameraArm;
+
+	// Third person right-left camera spring arm
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	class USpringArmComponent* ThirdPersonLeftRightCameraArm;
 
 	// Dead camera
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
@@ -64,13 +68,17 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	float BaseLookUpRate;
 
+	// Stores if the third person camera is active
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	bool bThirdPersonIsActive = false;
+
 	// Stores if the player is dead or not
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dead")
 	bool bIsDead = false;
 
 	// Stores if the player has powers currently
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Power")
-	bool bIsPowered = true; // For debugging
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Power")
+	bool bIsPowered = false;
 
 	// Maximum adrenaline that the player can store
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Adrenaline Management")
@@ -90,11 +98,11 @@ public:
 
 	// Bullet time world rate
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
-	float TimeDilationWorldRate = 0.25f;
+	float TimeDilationWorldRate = 0.5f;
 
 	// Bullet time player rate
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
-	float TimeDilationPlayerRate = 0.5f;
+	float TimeDilationPlayerRate = 0.75f;
 
 	// Adrenaline that the player loss per tick when use bullet time
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Time Dilation")
@@ -176,6 +184,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
 	bool bWallRunningStopDoOnce = true;
 
+	// Tutorial text
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Tutorial")
+	FString TutorialText = "";
+
 // Various
 	// HUD widget
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HUD")
@@ -190,6 +202,22 @@ public:
 	// Blink camera shake
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "CameraShake")
 	TSubclassOf<class UCameraShake> BlinkCameraShake;
+
+	// Background music
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundWave* BackgroundMusicAudioWave;
+
+	// Blink sound
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundWave* BlinkAudioWave;
+
+	// Bullet time start sound
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundWave* BulletTimeStartAudioWave;
+
+	// Bullet end sound
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundWave* BulletTimeEndAudioWave;
 
 	// Death sound
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
@@ -248,11 +276,11 @@ private:
 	void OnCameraToggle();
 
 	UFUNCTION(BlueprintCallable)
-	// Dead
-	void OnDead();
+	// Death
+	void OnDeath();
 
-	// Dead end
-	void OnDeadEnd();
+	// Death end
+	void OnDeathEnd();
 
 	// Climb surface detector
 	UFUNCTION()
@@ -291,8 +319,8 @@ private:
 // Interface methods
 public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
-	void HUDInterface(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface, bool &bIsDead_Interface);
-	virtual void HUDInterface_Implementation(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface, bool &bIsDead_Interface);
+	void HUDInterface(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface, bool &bIsDead_Interface, FString &TutorialText_Interface);
+	virtual void HUDInterface_Implementation(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface, bool &bIsDead_Interface, FString &TutorialText_Interface);
 
 //Util methods
 private:
@@ -309,7 +337,8 @@ public:
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 	FORCEINLINE class USpringArmComponent* GetFirstPersonCameraArm() const { return FirstPersonCameraArm; }
 	FORCEINLINE class UCameraComponent* GetThirdPersonCameraComponent() const { return ThirdPersonCameraComponent; }
-	FORCEINLINE class USpringArmComponent* GetThirdPersonCameraArm() const { return ThirdPersonCameraArm; }
+	FORCEINLINE class USpringArmComponent* GetThirdPersonForwardBackwardCameraArm() const { return ThirdPersonForwardBackwardCameraArm; }
+	FORCEINLINE class USpringArmComponent* GetThirdPersonLeftRightCameraArm() const { return ThirdPersonLeftRightCameraArm; }
 	FORCEINLINE class UCameraComponent* GetDeathCameraComponent() const { return DeathCameraComponent; }
 	FORCEINLINE class USpringArmComponent* GetDeathCameraArm() const { return DeathCameraArm; }
 	FORCEINLINE class USphereComponent* GetClimbSurfaceDetector() const { return ClimbSurfaceDetector; }

@@ -45,13 +45,14 @@ AMainCharacter::AMainCharacter()
 	static ConstructorHelpers::FObjectFinder<UClass> AnimationBlueprintObjectFinder(TEXT("/Game/Hero/Animations/HeroAnimationBlueprint.HeroAnimationBlueprint_C"));
 	GetMesh()->SkeletalMesh = SkeletalMeshObjectFinder.Object;
 	GetMesh()->SetAnimInstanceClass(AnimationBlueprintObjectFinder.Object);
-	GetMesh()->RelativeLocation = FVector(0.0f, 0.0f, -CapsuleHalfHeight);
+	GetMesh()->RelativeLocation = FVector(-7.5f, 0.0f, -CapsuleHalfHeight);
 	GetMesh()->RelativeRotation = FRotator(0.0f, -90.0f, 0.0f);
 	GetMesh()->bOnlyOwnerSee = false;
 	GetMesh()->bOwnerNoSee = false;
 	GetMesh()->bCastDynamicShadow = true;
 	GetMesh()->bReceivesDecals = false;
 	GetMesh()->SetCollisionProfileName(FName("CharacterMesh"));
+	//GetMesh()->SetMassScale(TEXT("root"), 80.0f);
 
 	// First person camera arm
 	FirstPersonCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("FirstPersonCameraArm"));
@@ -60,6 +61,7 @@ AMainCharacter::AMainCharacter()
 	GetFirstPersonCameraArm()->RelativeRotation = FRotator(0.0f, 90.0f, -90.0f);
 	GetFirstPersonCameraArm()->TargetArmLength = -15.0f;
 	GetFirstPersonCameraArm()->bDoCollisionTest = true;
+	GetFirstPersonCameraArm()->ProbeChannel = ECollisionChannel::ECC_Camera;
 	GetFirstPersonCameraArm()->ProbeSize = DefaultFPCameraProbeSize;
 
 	// First person camera
@@ -69,19 +71,32 @@ AMainCharacter::AMainCharacter()
 	GetFirstPersonCameraComponent()->FieldOfView = 95.0f;
 	GetFirstPersonCameraComponent()->bAutoActivate = true;
 
-	// Third person camera arm
-	ThirdPersonCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("ThirdPersonCameraArm"));
-	GetThirdPersonCameraArm()->SetupAttachment(GetMesh(), TEXT("HeadSocket"));
-	GetThirdPersonCameraArm()->RelativeRotation = FRotator(0.0f, 90.0f, -90.0f);
-	GetThirdPersonCameraArm()->TargetArmLength = 200.0f;
-	GetThirdPersonCameraArm()->bDoCollisionTest = true;
-	GetThirdPersonCameraArm()->ProbeSize = 25.0f;
-	GetThirdPersonCameraArm()->bUsePawnControlRotation = true;
+	// Third person forward-backward camera arm
+	ThirdPersonForwardBackwardCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("ThirdPersonForwardBackwardCameraArm"));
+	GetThirdPersonForwardBackwardCameraArm()->SetupAttachment(GetMesh(), TEXT("HeadSocket"));
+	GetThirdPersonForwardBackwardCameraArm()->RelativeLocation = FVector(5.0f, -25.0f, 0.0f);
+	GetThirdPersonForwardBackwardCameraArm()->RelativeRotation = FRotator(0.0f, 0.0f, 90.0f);
+	GetThirdPersonForwardBackwardCameraArm()->TargetArmLength = 200.0f;
+	GetThirdPersonForwardBackwardCameraArm()->bDoCollisionTest = true;
+	GetThirdPersonForwardBackwardCameraArm()->ProbeChannel = ECollisionChannel::ECC_Camera;
+	GetThirdPersonForwardBackwardCameraArm()->ProbeSize = 25.0f;
+	GetThirdPersonForwardBackwardCameraArm()->bUsePawnControlRotation = true;
+
+	// Third person left-right camera arm
+	ThirdPersonLeftRightCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("ThirdPersonLeftRightCameraArm"));
+	GetThirdPersonLeftRightCameraArm()->SetupAttachment(ThirdPersonForwardBackwardCameraArm);
+	GetThirdPersonLeftRightCameraArm()->RelativeLocation = FVector(0.0f, 0.0f, 0.0f);
+	GetThirdPersonLeftRightCameraArm()->RelativeRotation = FRotator(0.0f, -90.0f, 0.0f);
+	GetThirdPersonLeftRightCameraArm()->TargetArmLength = 35.0f;
+	GetThirdPersonLeftRightCameraArm()->bDoCollisionTest = true;
+	GetThirdPersonLeftRightCameraArm()->ProbeChannel = ECollisionChannel::ECC_Camera;
+	GetThirdPersonLeftRightCameraArm()->ProbeSize = 12.0f;
+	GetThirdPersonLeftRightCameraArm()->bUsePawnControlRotation = false;
 
 	// Third person camera
 	ThirdPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("ThirdPersonCamera"));
-	GetThirdPersonCameraComponent()->SetupAttachment(ThirdPersonCameraArm);
-	//GetThirdPersonCameraComponent()->bUsePawnControlRotation = true;
+	GetThirdPersonCameraComponent()->SetupAttachment(ThirdPersonLeftRightCameraArm);
+	GetThirdPersonCameraComponent()->RelativeRotation = FRotator(0.0f, 90.0f, 0.0f);
 	GetThirdPersonCameraComponent()->FieldOfView = 95.0f;
 	GetThirdPersonCameraComponent()->bAutoActivate = false;
 
@@ -106,8 +121,8 @@ AMainCharacter::AMainCharacter()
 	GetClimbSurfaceDetector()->InitSphereRadius(125.0f);
 	GetClimbSurfaceDetector()->bGenerateOverlapEvents = true;
 	GetClimbSurfaceDetector()->SetCollisionObjectType(ECollisionChannel::ECC_GameTraceChannel1);
-	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
-	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Block);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore);
+	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Block);
 	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Block);
 	GetClimbSurfaceDetector()->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldDynamic, ECollisionResponse::ECR_Block);
@@ -128,7 +143,7 @@ AMainCharacter::AMainCharacter()
 
 	// Character movement setups
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
-	GetCharacterMovement()->CrouchedHalfHeight = 65.0f;
+	GetCharacterMovement()->CrouchedHalfHeight = 70.0f;
 	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->GravityScale = 1.5f;
@@ -136,6 +151,22 @@ AMainCharacter::AMainCharacter()
 
 	// Capsule overlap
 	OnActorBeginOverlap.AddDynamic(this, &AMainCharacter::BeginOverlap);
+
+	// Background music
+	static ConstructorHelpers::FObjectFinder<USoundWave> BackgroundMusicAudioWaveObjectFinder(*FString("Blueprint'/Game/Music/PuzzleGame.PuzzleGame'"));
+	BackgroundMusicAudioWave = BackgroundMusicAudioWaveObjectFinder.Object;
+
+	// Blink sound
+	static ConstructorHelpers::FObjectFinder<USoundWave> BlinkAudioWaveObjectFinder(*FString("Blueprint'/Game/SFX/Blink.Blink'"));
+	BlinkAudioWave = BlinkAudioWaveObjectFinder.Object;
+
+	// Bullet time start sound
+	static ConstructorHelpers::FObjectFinder<USoundWave> BulletTimeStartAudioWaveObjectFinder(*FString("Blueprint'/Game/SFX/BulletTimeStart.BulletTimeStart'"));
+	BulletTimeStartAudioWave = BulletTimeStartAudioWaveObjectFinder.Object;
+
+	// Bullet time end sound
+	static ConstructorHelpers::FObjectFinder<USoundWave> BulletTimeEndAudioWaveObjectFinder(*FString("Blueprint'/Game/SFX/BulletTimeEnd.BulletTimeEnd'"));
+	BulletTimeEndAudioWave = BulletTimeEndAudioWaveObjectFinder.Object;
 
 	// Death sound
 	static ConstructorHelpers::FObjectFinder<USoundWave> DeathAudioWaveObjectFinder(*FString("Blueprint'/Game/SFX/Death/Death1.Death1'"));
@@ -147,9 +178,9 @@ AMainCharacter::AMainCharacter()
 	// Various
 	static ConstructorHelpers::FClassFinder<UCameraShake> BlinkCameraShakeClassFinder(TEXT("Class'/Game/Blueprints/CameraShakes/BlinkCameraShake.BlinkCameraShake_C'"));
 	BlinkCameraShake = BlinkCameraShakeClassFinder.Class;
-	static ConstructorHelpers::FClassFinder<UUserWidget> HUDWidgetClassFinder(TEXT("Class'/Game/Blueprints/HUD/HUDWidget.HUDWidget_C'"));
+	static ConstructorHelpers::FClassFinder<UUserWidget> HUDWidgetClassFinder(TEXT("Class'/Game/Blueprints/HUDs/UserHUD/UserHUDWidget.UserHUDWidget_C'"));
 	HUDWidget = HUDWidgetClassFinder.Class;
-	static ConstructorHelpers::FClassFinder<UUserWidget> PauseWidgetClassFinder(TEXT("Class'/Game/Blueprints/MainMenu/MainMenuWidget.MainMenuWidget_C'"));
+	static ConstructorHelpers::FClassFinder<UUserWidget> PauseWidgetClassFinder(TEXT("Class'/Game/Blueprints/HUDs/MainMenu/MainMenuWidget.MainMenuWidget_C'"));
 	PauseWidget = PauseWidgetClassFinder.Class;
 }
 
@@ -192,7 +223,7 @@ void AMainCharacter::Tick(float DeltaTime)
 	{
 		if (bIsWallRunning && !bIsClimbingLedge)
 		{
-			WallRunningStop();
+			WallRunningStopDoOnce();
 		}
 	}
 
@@ -232,8 +263,11 @@ void AMainCharacter::BeginPlay()
 	// Animation access util
 	Animation = Cast<UHeroAnimationInstance>(GetMesh()->GetAnimInstance());
 
+	// Start background music
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), BackgroundMusicAudioWave, GetActorLocation());
+
 	// Save load
-	if(UGameplayStatics::DoesSaveGameExist(TEXT("Save"), 0))
+	if (UGameplayStatics::DoesSaveGameExist(TEXT("Save"), 0))
 	{
 		UMainSaveGame* LoadGameInstance = Cast<UMainSaveGame>(UGameplayStatics::CreateSaveGameObject(UMainSaveGame::StaticClass()));
 		LoadGameInstance = Cast<UMainSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("Save"), 0));
@@ -244,10 +278,16 @@ void AMainCharacter::BeginPlay()
 
 		if (!RespawnFromStart && (RespawnLevel == CurrentLevel))
 		{
+			bIsPowered = LoadGameInstance->bIsPowered;
 			FVector RespawnLocation = LoadGameInstance->Location;
 			FRotator RespawnRotation = LoadGameInstance->Rotation;
 			this->SetActorLocation(RespawnLocation);
 			Controller->SetControlRotation(RespawnRotation);
+		}
+
+		if (RespawnFromStart)
+		{
+			bIsPowered = false;
 		}
 	}
 }
@@ -259,13 +299,10 @@ void AMainCharacter::BeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 	// Dead management
 	if (OtherActor->ActorHasTag(FName("deadly")))
 	{
-		OnDead();
-	}
-
-	// TODO: Collectible management
-	if (OtherActor->ActorHasTag(FName("collectible")))
-	{
-
+		if (!bIsDead)
+		{
+			OnDeath();
+		}
 	}
 }
 
@@ -385,15 +422,7 @@ void AMainCharacter::RotationTrick(float Value)
 
 void AMainCharacter::OnAction()
 {
-	// TODO
-	if(UGameplayStatics::IsGamePaused(GetWorld()))
-	{
-		UGameplayStatics::SetGamePaused(GetWorld(), false);
-	}
-	else
-	{
-		UGameplayStatics::SetGamePaused(GetWorld(), true);
-	}
+	
 }
 
 void AMainCharacter::OnSprintPressed()
@@ -427,7 +456,7 @@ void AMainCharacter::OnJump()
 			else
 			{
 				// Check if there is space to place the character after climb the ledge
-				if(CanClimbLedge())
+				if (CanClimbLedge())
 				{
 					AMainCharacter::ClimbLedge();
 				}
@@ -438,7 +467,7 @@ void AMainCharacter::OnJump()
 
 void AMainCharacter::OnCrouchPressed()
 {
-	if(!bIsHanging)
+	if (!bIsHanging)
 	{
 		Crouch();
 	}
@@ -471,13 +500,15 @@ void AMainCharacter::OnTimeDilationToggle()
 
 void AMainCharacter::StartTimeDilation()
 {
-	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), TimeDilationPlayerRate);
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), BulletTimeStartAudioWave, GetActorLocation(), 1.0f, 1.0f, 0.5f);
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), TimeDilationWorldRate);
 	this->CustomTimeDilation = TimeDilationPlayerRate;
 	bTimeDilationIsActive = true;
 }
 
 void AMainCharacter::EndTimeDilation()
 {
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), BulletTimeEndAudioWave, GetActorLocation());
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 	this->CustomTimeDilation = 1.0f;
 	bTimeDilationIsActive = false;
@@ -491,14 +522,15 @@ void AMainCharacter::OnBlink()
 
 		// Timer handle
 		FTimerHandle BlinkHandle;
-		GetWorldTimerManager().SetTimer(BlinkHandle, this, &AMainCharacter::OnBlinkTimerEnd, 0.25f, false);
+		GetWorldTimerManager().SetTimer(BlinkHandle, this, &AMainCharacter::OnBlinkTimerEnd, 0.2f, false);
 	}
 }
 
 void AMainCharacter::OnBlinkTimerEnd()
 {
 	PlayerController->ClientPlayCameraShake(BlinkCameraShake, 1.5f);
-	this->SetActorLocationAndRotation(BlinkLocation + FVector(0, 0, 100), GetCapsuleComponent()->GetComponentRotation());
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), BlinkAudioWave, GetActorLocation());
+	this->SetActorLocationAndRotation(BlinkLocation + FVector(0.0f, 0.0f, 100.0f), GetCapsuleComponent()->GetComponentRotation(), true, nullptr, ETeleportType::None);
 	CurrentAdrenaline = FMath::Max(CurrentAdrenaline - AdrenalinePerBlink, 0.0f);
 	bBlinkIsActive = false;
 }
@@ -514,21 +546,35 @@ void AMainCharacter::CheckCanBlink()
 		RV_TraceParams.bReturnPhysicalMaterial = false;
 		RV_TraceParams.AddIgnoredActor(this);
 
-		FHitResult RV_Hit(ForceInit);
+		FHitResult RV_Hit_Blink(ForceInit);
 
-		GetWorld()->LineTraceSingleByChannel(
-			RV_Hit, // Result
-			FirstPersonCameraComponent->GetComponentLocation(), // Start
-			FirstPersonCameraComponent->GetComponentLocation() +
-			(FirstPersonCameraComponent->GetForwardVector() * BlinkMaximumDistance), // End
-			ECollisionChannel::ECC_Visibility, // Collision channel
-			RV_TraceParams
-		);
+		if (!bThirdPersonIsActive) {
+			GetWorld()->LineTraceSingleByChannel(
+				RV_Hit_Blink, // Result
+				GetFirstPersonCameraComponent()->GetComponentLocation(), // Start
+				GetFirstPersonCameraComponent()->GetComponentLocation() +
+				(GetFirstPersonCameraComponent()->GetForwardVector() * BlinkMaximumDistance), // End
+				ECollisionChannel::ECC_Visibility, // Collision channel
+				RV_TraceParams
+			);
+		}
+		else
+		{
+			GetWorld()->LineTraceSingleByChannel(
+				RV_Hit_Blink, // Result
+				GetThirdPersonCameraComponent()->GetComponentLocation(), // Start
+				GetThirdPersonCameraComponent()->GetComponentLocation() +
+				(GetThirdPersonCameraComponent()->GetForwardVector() * BlinkMaximumDistance), // End
+				ECollisionChannel::ECC_Visibility, // Collision channel
+				RV_TraceParams
+			);
+		}
+		//GetWorld()->DebugDrawTraceTag = FName(TEXT("BlinkTracer"));
 
 		// If was a blocking hit, it return true and update the blink location too
-		if (RV_Hit.bBlockingHit)
+		if (RV_Hit_Blink.bBlockingHit)
 		{
-			BlinkLocation = RV_Hit.ImpactPoint;
+			BlinkLocation = RV_Hit_Blink.ImpactPoint;
 			bCanBlink = true;
 		}
 		else {
@@ -545,13 +591,17 @@ void AMainCharacter::OnPause()
 {
 	if (UGameplayStatics::IsGamePaused(GetWorld()))
 	{
-		UGameplayStatics::SetGamePaused(GetWorld(), false);
+		// Check if the player isn't on a tutorial
+		if (TutorialText == "")
+		{
+			UGameplayStatics::SetGamePaused(GetWorld(), false);
 
-		PauseWidgetHolder->SetVisibility(ESlateVisibility::Hidden);
-		HUDWidgetHolder->SetVisibility(ESlateVisibility::Visible);
+			PauseWidgetHolder->SetVisibility(ESlateVisibility::Hidden);
+			HUDWidgetHolder->SetVisibility(ESlateVisibility::Visible);
 
-		UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
-		PlayerController->bShowMouseCursor = false;
+			UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
+			PlayerController->bShowMouseCursor = false;
+		}
 	}
 	else
 	{
@@ -567,29 +617,41 @@ void AMainCharacter::OnPause()
 
 void AMainCharacter::OnCameraToggle()
 {
-	if(!bIsDead)
+	if (!bIsDead)
 	{
 		GetFirstPersonCameraComponent()->ToggleActive();
 		GetThirdPersonCameraComponent()->ToggleActive();
+	}
+
+	if (GetFirstPersonCameraComponent()->IsActive()) {
+		bThirdPersonIsActive = false;
+	}
+	else
+	{
+		bThirdPersonIsActive = true;
 	}
 }
 
 void AMainCharacter::OnClimbSurfaceDetectorBeginOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
 {
-	bCanTrace = true;
-	//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, "Sphere can trace");
+	TArray<AActor*> OverlappingActorsArray;
+	GetClimbSurfaceDetector()->GetOverlappingActors(OverlappingActorsArray);
+	bCanTrace = OverlappingActorsArray.Num() > 0;
+	//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, "Sphere begin overlap");
 }
 
 void AMainCharacter::OnClimbSurfaceDetectorEndOverlap(class UPrimitiveComponent* HitComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	bCanTrace = false;
-	//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, "Sphere cannot trace");
+	TArray<AActor*> OverlappingActorsArray;
+	GetClimbSurfaceDetector()->GetOverlappingActors(OverlappingActorsArray);
+	bCanTrace = OverlappingActorsArray.Num() > 0;
+	//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, "Sphere end overlap");
 }
 
 void AMainCharacter::DoTrace()
 {
 	//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, "Climbing system tracing");
-	if((GetCharacterMovement()->IsFalling() && !bIsHanging) || bIsWallRunning)
+	if ((GetCharacterMovement()->IsFalling() && !bIsHanging) || bIsWallRunning)
 	{
 		// Wall tracer
 		FCollisionQueryParams RV_TraceParams_Wall = FCollisionQueryParams(FName(TEXT("WallTracer")), true, this);
@@ -628,7 +690,7 @@ void AMainCharacter::DoTrace()
 				GetActorLocation() + (GetActorForwardVector() * 0.95f), // Start
 				GetActorLocation() + (GetActorForwardVector() * 0.95f) + FVector(0, 0, 150.0f), // End
 				FQuat(),
-				ECollisionChannel::ECC_GameTraceChannel2, // Collision channel
+				ECollisionChannel::ECC_Visibility, // Collision channel
 				FCollisionShape::MakeSphere(20.0f), // Radius
 				RV_TraceParams_Roof
 			);
@@ -685,6 +747,25 @@ void AMainCharacter::DoTrace()
 		);
 		//GetWorld()->DebugDrawTraceTag = FName(TEXT("HeightTracerRight"));
 
+		// Floor tracer
+		FCollisionQueryParams RV_TraceParams_Floor = FCollisionQueryParams(FName(TEXT("FloorTracer")), true, this);
+		RV_TraceParams_Floor.bTraceComplex = true;
+		RV_TraceParams_Floor.bTraceAsyncScene = true;
+		RV_TraceParams_Floor.bReturnPhysicalMaterial = false;
+
+		FHitResult RV_Hit_Floor(ForceInit);
+
+		GetWorld()->SweepSingleByChannel(
+			RV_Hit_Floor, // Result
+			GetActorLocation(), // Start
+			GetActorLocation() + FVector(0, 0, -250.0f), // End
+			FQuat(),
+			ECollisionChannel::ECC_Visibility, // Collision channel
+			FCollisionShape::MakeSphere(20.0f), // Radius
+			RV_TraceParams_Floor
+		);
+		//GetWorld()->DebugDrawTraceTag = FName(TEXT("FloorTracer"));
+
 		if (RV_Hit_Height_Left.bBlockingHit && RV_Hit_Height_Right.bBlockingHit)
 		{
 			//GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, "Height tracer succeed");
@@ -694,7 +775,8 @@ void AMainCharacter::DoTrace()
 			if (!bIsWallRunning)
 			{
 				if ((((GetMesh()->GetSocketLocation(TEXT("HipSocket"))).Z - (LedgeHeight.Z)) >= -70.0f)
-					&& (((GetMesh()->GetSocketLocation(TEXT("HipSocket"))).Z - (LedgeHeight.Z)) <= 0.0f))
+					&& (((GetMesh()->GetSocketLocation(TEXT("HipSocket"))).Z - (LedgeHeight.Z)) <= 0.0f)
+					&& !RV_Hit_Floor.bBlockingHit)
 				{
 					GrabLedgeDoOnce();
 				}
@@ -758,11 +840,16 @@ void AMainCharacter::DoTrace()
 		{
 			bCanBraceHang = true;
 			Animation->bCanBraceHang = true;
+			if (!bIsGrabbingLookingRear)
+			{
+				RestrictView(AlignToWall().Yaw - 60.0f, AlignToWall().Yaw + 60.0f, -60.0f);
+			}
 		}
 		else
 		{
 			bCanBraceHang = false;
 			Animation->bCanBraceHang = false;
+			RestrictView(AlignToWall().Yaw - 50.0f, AlignToWall().Yaw + 50.0f, -35.0f);
 		}
 	}
 }
@@ -776,6 +863,7 @@ void AMainCharacter::GrabLedgeDoOnce()
 		if (!bIsClimbingLedge)
 		{
 			GetFirstPersonCameraArm()->ProbeSize = HangingFPCameraProbeSize;
+			GetMesh()->RelativeLocation = FVector(0.0f, 0.0f, -CapsuleHalfHeight);
 
 			Animation->bIsHanging = true;
 
@@ -829,6 +917,7 @@ void AMainCharacter::LeaveLedge()
 	bUseControllerRotationYaw = true;
 	ResetRestrictView();
 	GetFirstPersonCameraArm()->ProbeSize = DefaultFPCameraProbeSize;
+	GetMesh()->RelativeLocation = FVector(-7.5f, 0.0f, -CapsuleHalfHeight);
 }
 
 void AMainCharacter::ClimbLedge()
@@ -859,7 +948,10 @@ void AMainCharacter::KneeClimbLedge()
 	{
 		if (!bIsWallRunning || (bIsWallRunning && (AMainCharacter::GetVelocity().Z < 300.0f)))
 		{
-			KneeClimbLedgeDoOnce();
+			if (CanClimbLedge())
+			{
+				KneeClimbLedgeDoOnce();
+			}
 		}
 		else
 		{
@@ -925,6 +1017,7 @@ void AMainCharacter::CompleteClimb()
 	bUseControllerRotationYaw = true;
 	ResetRestrictView();
 	GetFirstPersonCameraArm()->ProbeSize = DefaultFPCameraProbeSize;
+	GetMesh()->RelativeLocation = FVector(-7.5f, 0.0f, -CapsuleHalfHeight);
 }
 
 bool AMainCharacter::CanClimbLedge()
@@ -1017,11 +1110,11 @@ void AMainCharacter::GrabLedgeMove()
 
 				GetWorld()->SweepSingleByChannel(
 					RV_Hit_Grab_Look_Right, // Result
-					GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) + (GetActorRightVector() * FVector(50.0f, 50.0f, 0.0f)), // Start
-					GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) + (GetActorRightVector() * 350.0f), // End
+					GetActorLocation() + FVector(0, 0, 125.0f) + (GetActorForwardVector() * 50.0f) + (GetActorRightVector() * FVector(50.0f, 50.0f, 0.0f)), // Start
+					GetActorLocation() + FVector(0, 0, 125.0f) + (GetActorForwardVector() * 50.0f) + (GetActorRightVector() * 350.0f), // End
 					FQuat(),
 					ECollisionChannel::ECC_Visibility, // Collision channel
-					FCollisionShape::MakeSphere(10.0f), // Radius
+					FCollisionShape::MakeSphere(2.5f), // Radius
 					RV_TraceParams_Grab_Look_Right
 				);
 				//GetWorld()->DebugDrawTraceTag = FName(TEXT("GrabLookTracerRight"));
@@ -1089,11 +1182,11 @@ void AMainCharacter::GrabLedgeMove()
 
 				GetWorld()->SweepSingleByChannel(
 					RV_Hit_Grab_Look_Left, // Result
-					GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * FVector(50.0f, 50.0f, 0.0f)), // Start
-					GetActorLocation() + FVector(0, 0, 110.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 350.0f), // End
+					GetActorLocation() + FVector(0, 0, 125.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * FVector(50.0f, 50.0f, 0.0f)), // Start
+					GetActorLocation() + FVector(0, 0, 125.0f) + (GetActorForwardVector() * 50.0f) - (GetActorRightVector() * 350.0f), // End
 					FQuat(),
 					ECollisionChannel::ECC_Visibility, // Collision channel
-					FCollisionShape::MakeSphere(10.0f), // Radius
+					FCollisionShape::MakeSphere(2.5f), // Radius
 					RV_TraceParams_Grab_Look_Left
 				);
 				//GetWorld()->DebugDrawTraceTag = FName(TEXT("GrabLookTracerLeft"));
@@ -1121,19 +1214,21 @@ void AMainCharacter::GrabLedgeRear()
 	{
 		bIsGrabbingLookingRear = true;
 		Animation->bIsGrabingAndLookingRear = true;
+		GetCharacterMovement()->StopMovementImmediately();
 
 		// Camera restrictions
 		bUseControllerRotationYaw = false;
-		RestrictView(AlignToWall().Yaw + 120.0f, AlignToWall().Yaw - 120.0f, -60.0f);
+		RestrictView(AlignToWall().Yaw - 175.0f, AlignToWall().Yaw - 60.0f, -60.0f);
 	}
 }
 
 void AMainCharacter::GrabLedgeRearCancel()
 {
-	if(bIsGrabbingLookingRear)
+	if (bIsGrabbingLookingRear)
 	{
 		bIsGrabbingLookingRear = false;
 		Animation->bIsGrabingAndLookingRear = false;
+		GetCharacterMovement()->StopMovementImmediately();
 
 		// Camera restrictions
 		bUseControllerRotationYaw = false;
@@ -1146,13 +1241,13 @@ void AMainCharacter::JumpGrabbingSide()
 	LeaveLedge();
 	if (GetInputAxisValue(TEXT("MoveRight")) > 0.0f)
 	{
-		LaunchCharacter((GetActorRightVector() * 500.0f) + FVector(0, 0, 600.0f), false, false);
+		LaunchCharacter((GetActorRightVector() * 500.0f) + FVector(0, 0, 650.0f), false, false);
 	}
 	else
 	{
 		if (GetInputAxisValue(TEXT("MoveRight")) < 0.0f)
 		{
-			LaunchCharacter((UKismetMathLibrary::NegateVector(GetActorRightVector()) * 500.0f) + FVector(0, 0, 600.0f), false, false);
+			LaunchCharacter((UKismetMathLibrary::NegateVector(GetActorRightVector()) * 500.0f) + FVector(0, 0, 650.0f), false, false);
 		}
 	}
 }
@@ -1160,7 +1255,7 @@ void AMainCharacter::JumpGrabbingSide()
 void AMainCharacter::JumpGrabbingRear()
 {
 	LeaveLedge();
-	LaunchCharacter((WallNormal * 500) + FVector(0, 0, 300.0f), false, false);
+	LaunchCharacter((WallNormal * 500.0f) + FVector(0, 0, 300.0f), false, false);
 	PlayerController->SetControlRotation(GetActorRotation() + FRotator(0, 180.0f, 0));
 }
 
@@ -1245,26 +1340,30 @@ void AMainCharacter::WallRunningRearJump()
 	if (bIsWallRunning && !bIsClimbingLedge)
 	{
 		WallRunningStop();
-		LaunchCharacter((WallNormal * 750.0f) + FVector(0, 0, 500.0f), false, false);
 		PlayerController->SetControlRotation(GetActorRotation() + FRotator(0, 180.0f, 0));
+		LaunchCharacter((WallNormal * 250.0f) + FVector(0, 0, 300.0f), false, false);
 		bCanDoWallRunning = true;
 	}
 }
 
 void AMainCharacter::WallRunningStop()
 {
-	bWallRunningStopDoOnce = false;
 	Animation->bIsWallRunnnig = false;
-	Animation->WallRunning();
+	Animation->WallRunningStop();
 
 	GetCharacterMovement()->StopMovementImmediately();
-	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
+
 	bIsWallRunning = false;
 	bIsClimbingLedge = false;
 
-	// Camera restrictions
-	bUseControllerRotationYaw = true;
-	ResetRestrictView();
+	if (!bIsHanging)
+	{
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
+
+		// Camera restrictions
+		bUseControllerRotationYaw = true;
+		ResetRestrictView();
+	}
 }
 
 void AMainCharacter::WallRunningStopDoOnce()
@@ -1281,28 +1380,37 @@ void AMainCharacter::WallRunningStopReset()
 	bWallRunningStopDoOnce = true;
 }
 
-void AMainCharacter::OnDead()
+void AMainCharacter::OnDeath()
 {
-	bIsDead = true;
-	GetMesh()->SetCollisionProfileName(FName("Ragdoll"));
-	GetMesh()->SetSimulatePhysics(true);
-	this->DisableInput(PlayerController);
+	if (!bIsDead)
+	{
+		bIsDead = true;
+		if (bTimeDilationIsActive)
+		{
+			EndTimeDilation();
+		}
+		GetMesh()->SetCollisionProfileName(FName("Ragdoll"));
+		GetMesh()->SetSimulatePhysics(true);
+		this->DisableInput(PlayerController);
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+		GetCharacterMovement()->StopMovementImmediately();
 
-	// Camera management
-	GetFirstPersonCameraComponent()->SetActive(false);
-	GetThirdPersonCameraComponent()->SetActive(false);
-	GetDeathCameraComponent()->SetActive(true);
-	PlayerController->ClientSetCameraFade(true, FColor::Red, FVector2D(0.75, 0.0), 2.5f);
+		// Camera management
+		GetFirstPersonCameraComponent()->SetActive(false);
+		GetThirdPersonCameraComponent()->SetActive(false);
+		GetDeathCameraComponent()->SetActive(true);
+		PlayerController->ClientSetCameraFade(true, FColor::Red, FVector2D(0.75, 0.0), 2.5f);
 
-	// Sound
-	UGameplayStatics::PlaySoundAtLocation(GetWorld(), DeathAudioWave, GetActorLocation());
+		// Sound
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), DeathAudioWave, GetActorLocation());
 
-	// Timer Handle
-	FTimerHandle DeadHandle;
-	GetWorldTimerManager().SetTimer(DeadHandle, this, &AMainCharacter::OnDeadEnd, 5.0f, false);
+		// Timer Handle
+		FTimerHandle DeadHandle;
+		GetWorldTimerManager().SetTimer(DeadHandle, this, &AMainCharacter::OnDeathEnd, 3.0f, false);
+	}
 }
 
-void AMainCharacter::OnDeadEnd()
+void AMainCharacter::OnDeathEnd()
 {
 	FName RespawnLevel = FName("Tutorial"); // Default (first) map
 	
@@ -1368,10 +1476,11 @@ void AMainCharacter::RestrictView(float YawMin, float YawMax, float PitchMin)
 //////////////////////////////////////////////////////////////////////////
 // Interface
 
-void AMainCharacter::HUDInterface_Implementation(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface, bool &bIsDead_Interface)
+void AMainCharacter::HUDInterface_Implementation(bool &bCanBlink_Interface, float &CurrentAdrenaline_Interface, float &MaximumAdrenaline_Interface, bool &bIsDead_Interface, FString &TutorialText_Interface)
 {
 	bCanBlink_Interface = bCanBlink;
 	CurrentAdrenaline_Interface = CurrentAdrenaline;
 	MaximumAdrenaline_Interface = MaximumAdrenaline;
 	bIsDead_Interface = bIsDead;
+	TutorialText_Interface = TutorialText;
 }
